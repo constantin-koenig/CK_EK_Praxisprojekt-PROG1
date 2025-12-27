@@ -21,7 +21,7 @@
         <!-- Toolbar -->
         <ToolBar Grid.Row="0" Margin="5">
             <Button Content="Dokumente" Command="{Binding ShowDocumentsCommand}" Padding="10,5"/>
-            <Button Content="Kategorien" Command="{Binding ShowCategoriesCommand}" Padding="10,5"/>
+            <Button Content="Ordner" Command="{Binding ShowFoldersCommand}" Padding="10,5"/>
             <Separator/>
             <Button Content="Aktualisieren" Command="{Binding RefreshCommand}" Padding="10,5"/>
         </ToolBar>
@@ -34,11 +34,11 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             
-            <!-- Kategorie-Baum -->
-            <GroupBox Header="Kategorien" Grid.Column="0">
-                <TreeView ItemsSource="{Binding CategoryTreeViewModel.Categories}">
+            <!-- Ordner-Baum -->
+            <GroupBox Header="Ordner" Grid.Column="0">
+                <TreeView ItemsSource="{Binding FolderTreeViewModel.Folders}">
                     <TreeView.ItemTemplate>
-                        <HierarchicalDataTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <TextBlock Text="{Binding Name}"/>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
@@ -82,8 +82,9 @@
                               Margin="5">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Titel" Binding="{Binding Title}" Width="*"/>
-                            <DataGridTextColumn Header="Typ" Binding="{Binding FileType}" Width="80"/>
-                            <DataGridTextColumn Header="Kategorie" Binding="{Binding CategoryName}" Width="120"/>
+                            <DataGridTextColumn Header="Dateiname" Binding="{Binding FileName}" Width="150"/>
+                            <DataGridTextColumn Header="Typ" Binding="{Binding ContentType}" Width="100"/>
+                            <DataGridTextColumn Header="Ordner" Binding="{Binding FolderName}" Width="120"/>
                             <DataGridTextColumn Header="Erstellt" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy}" Width="100"/>
                         </DataGrid.Columns>
                     </DataGrid>

@@ -23,92 +23,64 @@ public class DocumentService : IDocumentService
         return document is null ? null : MapToDto(document);
     }
 
+    public async Task<DocumentDataDto?> GetWithDataAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var document = await _unitOfWork.Documents.GetWithDataAsync(id, cancellationToken);
+        return document is null ? null : MapToDataDto(document);
+    }
+
     public async Task<IEnumerable<DocumentDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var documents = await _unitOfWork.Documents.GetAllAsync(cancellationToken);
         return documents.Select(MapToDto);
     }
 
-    public async Task<IEnumerable<DocumentDto>> GetByCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<DocumentDto>> GetByFolderAsync(Guid folderId, CancellationToken cancellationToken = default)
     {
-        var documents = await _unitOfWork.Documents.GetByCategoryIdAsync(categoryId, cancellationToken);
+        var documents = await _unitOfWork.Documents.GetByFolderIdAsync(folderId, cancellationToken);
         return documents.Select(MapToDto);
     }
 
     public async Task<IEnumerable<DocumentDto>> SearchAsync(string searchTerm, CancellationToken cancellationToken = default)
     {
-        var documents = await _unitOfWork.Documents.SearchByTitleAsync(searchTerm, cancellationToken);
+        var documents = await _unitOfWork.Documents.SearchAsync(searchTerm, cancellationToken);
         return documents.Select(MapToDto);
     }
 
     public async Task<DocumentDto> CreateAsync(CreateDocumentDto dto, CancellationToken cancellationToken = default)
     {
-        var document = new Document
-        {
-            Id = Guid.NewGuid(),
-            Title = dto.Title,
-            Description = dto.Description,
-            FilePath = dto.FilePath,
-            FileType = dto.FileType,
-            FileSize = dto.FileSize,
-            CategoryId = dto.CategoryId,
-            CreatedAt = DateTime.UtcNow
-        };
+        // Prüfe ob Ordner existiert
+        var folder = await _unitOfWork.Folders.GetByIdAsync(dto.FolderId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Ordner mit ID {dto.FolderId} wurde nicht gefunden.");
 
-        if (dto.Tags?.Any() == true)
+        var document = Document.Create(
+            dto.Title,
+            dto.FileName,
+            dto.ContentType,
+            dto.Data,
+            dto.FolderId,
+            dto.PlainText);
+
+        // Prüfe auf Duplikate anhand des Hash
+        if (document.Sha256 != null && await _unitOfWork.Documents.ExistsWithHashAsync(document.Sha256, cancellationToken))
         {
-            foreach (var tagName in dto.Tags)
-            {
-                var tag = await _unitOfWork.Tags.GetByNameAsync(tagName, cancellationToken);
-                if (tag is null)
-                {
-                    tag = new Tag
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = tagName,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    await _unitOfWork.Tags.AddAsync(tag, cancellationToken);
-                }
-                document.Tags.Add(tag);
-            }
+            throw new InvalidOperationException("Ein Dokument mit identischem Inhalt existiert bereits.");
         }
 
         await _unitOfWork.Documents.AddAsync(document, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        document.Folder = folder;
         return MapToDto(document);
     }
 
     public async Task<DocumentDto> UpdateAsync(Guid id, UpdateDocumentDto dto, CancellationToken cancellationToken = default)
     {
         var document = await _unitOfWork.Documents.GetByIdAsync(id, cancellationToken)
-            ?? throw new KeyNotFoundException($"Document with id {id} not found.");
+            ?? throw new KeyNotFoundException($"Dokument mit ID {id} wurde nicht gefunden.");
 
         document.Title = dto.Title;
-        document.Description = dto.Description;
-        document.CategoryId = dto.CategoryId;
         document.UpdatedAt = DateTime.UtcNow;
-
-        if (dto.Tags is not null)
-        {
-            document.Tags.Clear();
-            foreach (var tagName in dto.Tags)
-            {
-                var tag = await _unitOfWork.Tags.GetByNameAsync(tagName, cancellationToken);
-                if (tag is null)
-                {
-                    tag = new Tag
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = tagName,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    await _unitOfWork.Tags.AddAsync(tag, cancellationToken);
-                }
-                document.Tags.Add(tag);
-            }
-        }
 
         await _unitOfWork.Documents.UpdateAsync(document, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -122,19 +94,36 @@ public class DocumentService : IDocumentService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> ExistsWithHashAsync(string sha256, CancellationToken cancellationToken = default)
+    {
+        return await _unitOfWork.Documents.ExistsWithHashAsync(sha256, cancellationToken);
+    }
+
     private static DocumentDto MapToDto(Document document)
     {
         return new DocumentDto(
             document.Id,
             document.Title,
-            document.Description,
-            document.FilePath,
-            document.FileType,
-            document.FileSize,
-            document.CategoryId,
-            document.Category?.Name,
-            document.Tags.Select(t => t.Name),
-            document.CreatedAt,
-            document.UpdatedAt);
+            document.FileName,
+            document.ContentType,
+            document.Data.Length,
+            document.Sha256,
+            document.FolderId,
+            document.Folder?.Name,
+            document.CreatedAt);
+    }
+
+    private static DocumentDataDto MapToDataDto(Document document)
+    {
+        return new DocumentDataDto(
+            document.Id,
+            document.Title,
+            document.FileName,
+            document.ContentType,
+            document.Data,
+            document.PlainText,
+            document.Sha256,
+            document.FolderId,
+            document.CreatedAt);
     }
 }

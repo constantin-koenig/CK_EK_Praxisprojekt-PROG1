@@ -1,40 +1,46 @@
-using ArchivSoftware.Domain.Entities;
-
 namespace ArchivSoftware.Application.DTOs;
 
 /// <summary>
-/// DTO für Dokumenteninformationen.
+/// DTO für Dokumenteninformationen (ohne Binärdaten).
 /// </summary>
 public record DocumentDto(
     Guid Id,
     string Title,
-    string? Description,
-    string FilePath,
-    string FileType,
-    long FileSize,
-    Guid? CategoryId,
-    string? CategoryName,
-    IEnumerable<string> Tags,
-    DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    string FileName,
+    string ContentType,
+    long DataSize,
+    string? Sha256,
+    Guid FolderId,
+    string? FolderName,
+    DateTime CreatedAt);
 
 /// <summary>
 /// DTO für das Erstellen eines Dokuments.
 /// </summary>
 public record CreateDocumentDto(
     string Title,
-    string? Description,
-    string FilePath,
-    string FileType,
-    long FileSize,
-    Guid? CategoryId,
-    IEnumerable<string>? Tags);
+    string FileName,
+    string ContentType,
+    byte[] Data,
+    Guid FolderId,
+    string? PlainText);
 
 /// <summary>
 /// DTO für das Aktualisieren eines Dokuments.
 /// </summary>
 public record UpdateDocumentDto(
+    string Title);
+
+/// <summary>
+/// DTO für Dokumentendaten (mit Binärdaten).
+/// </summary>
+public record DocumentDataDto(
+    Guid Id,
     string Title,
-    string? Description,
-    Guid? CategoryId,
-    IEnumerable<string>? Tags);
+    string FileName,
+    string ContentType,
+    byte[] Data,
+    string PlainText,
+    string? Sha256,
+    Guid FolderId,
+    DateTime CreatedAt);

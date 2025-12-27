@@ -35,7 +35,7 @@ public partial class App : System.Windows.Application
         // ViewModels
         services.AddTransient<MainViewModel>();
         services.AddTransient<DocumentListViewModel>();
-        services.AddTransient<CategoryTreeViewModel>();
+        services.AddTransient<FolderTreeViewModel>();
     }
 
     protected override void OnStartup(StartupEventArgs e)

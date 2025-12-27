@@ -9,27 +9,33 @@ namespace ArchivSoftware.Ui.ViewModels;
 public class MainViewModel : ViewModelBase
 {
     private readonly IDocumentService _documentService;
-    private readonly ICategoryService _categoryService;
+    private readonly IFolderService _folderService;
     private ViewModelBase? _currentViewModel;
     private string _statusMessage = "Bereit";
 
-    public MainViewModel(IDocumentService documentService, ICategoryService categoryService)
+    public MainViewModel(IDocumentService documentService, IFolderService folderService)
     {
         _documentService = documentService;
-        _categoryService = categoryService;
+        _folderService = folderService;
 
         DocumentListViewModel = new DocumentListViewModel(documentService);
-        CategoryTreeViewModel = new CategoryTreeViewModel(categoryService);
+        FolderTreeViewModel = new FolderTreeViewModel(folderService);
+
+        // Verbinde Ordner-Auswahl mit Dokumentenliste
+        FolderTreeViewModel.FolderSelected += folderId =>
+        {
+            DocumentListViewModel.CurrentFolderId = folderId;
+        };
 
         CurrentViewModel = DocumentListViewModel;
 
         ShowDocumentsCommand = new RelayCommand(() => CurrentViewModel = DocumentListViewModel);
-        ShowCategoriesCommand = new RelayCommand(() => CurrentViewModel = CategoryTreeViewModel);
+        ShowFoldersCommand = new RelayCommand(() => CurrentViewModel = FolderTreeViewModel);
         RefreshCommand = new RelayCommand(async () => await RefreshAsync());
     }
 
     public DocumentListViewModel DocumentListViewModel { get; }
-    public CategoryTreeViewModel CategoryTreeViewModel { get; }
+    public FolderTreeViewModel FolderTreeViewModel { get; }
 
     public ViewModelBase? CurrentViewModel
     {
@@ -44,14 +50,14 @@ public class MainViewModel : ViewModelBase
     }
 
     public ICommand ShowDocumentsCommand { get; }
-    public ICommand ShowCategoriesCommand { get; }
+    public ICommand ShowFoldersCommand { get; }
     public ICommand RefreshCommand { get; }
 
     private async Task RefreshAsync()
     {
         StatusMessage = "Aktualisiere...";
         await DocumentListViewModel.LoadDocumentsAsync();
-        await CategoryTreeViewModel.LoadCategoriesAsync();
+        await FolderTreeViewModel.LoadFoldersAsync();
         StatusMessage = "Bereit";
     }
 }

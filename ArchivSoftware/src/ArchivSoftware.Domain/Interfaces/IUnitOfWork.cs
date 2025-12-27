@@ -6,7 +6,6 @@ namespace ArchivSoftware.Domain.Interfaces;
 public interface IUnitOfWork : IDisposable
 {
     IDocumentRepository Documents { get; }
-    ICategoryRepository Categories { get; }
-    ITagRepository Tags { get; }
+    IFolderRepository Folders { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

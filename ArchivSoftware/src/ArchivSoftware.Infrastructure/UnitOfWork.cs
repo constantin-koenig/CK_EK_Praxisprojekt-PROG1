@@ -11,8 +11,7 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly ArchivDbContext _context;
     private IDocumentRepository? _documentRepository;
-    private ICategoryRepository? _categoryRepository;
-    private ITagRepository? _tagRepository;
+    private IFolderRepository? _folderRepository;
     private bool _disposed;
 
     public UnitOfWork(ArchivDbContext context)
@@ -23,11 +22,8 @@ public class UnitOfWork : IUnitOfWork
     public IDocumentRepository Documents =>
         _documentRepository ??= new DocumentRepository(_context);
 
-    public ICategoryRepository Categories =>
-        _categoryRepository ??= new CategoryRepository(_context);
-
-    public ITagRepository Tags =>
-        _tagRepository ??= new TagRepository(_context);
+    public IFolderRepository Folders =>
+        _folderRepository ??= new FolderRepository(_context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

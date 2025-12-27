@@ -31,7 +31,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<IDocumentService, DocumentService>();
-        services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IFolderService, FolderService>();
 
         return services;
     }

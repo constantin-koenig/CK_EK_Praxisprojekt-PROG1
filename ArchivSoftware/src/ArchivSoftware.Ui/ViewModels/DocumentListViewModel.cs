@@ -15,6 +15,7 @@ public class DocumentListViewModel : ViewModelBase
     private DocumentDto? _selectedDocument;
     private string _searchText = string.Empty;
     private bool _isLoading;
+    private Guid? _currentFolderId;
 
     public DocumentListViewModel(IDocumentService documentService)
     {
@@ -49,6 +50,18 @@ public class DocumentListViewModel : ViewModelBase
         set => SetProperty(ref _isLoading, value);
     }
 
+    public Guid? CurrentFolderId
+    {
+        get => _currentFolderId;
+        set
+        {
+            if (SetProperty(ref _currentFolderId, value))
+            {
+                _ = LoadDocumentsAsync();
+            }
+        }
+    }
+
     public ICommand LoadDocumentsCommand { get; }
     public ICommand SearchCommand { get; }
     public ICommand DeleteCommand { get; }
@@ -58,7 +71,15 @@ public class DocumentListViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            var documents = await _documentService.GetAllAsync();
+            IEnumerable<DocumentDto> documents;
+            if (_currentFolderId.HasValue)
+            {
+                documents = await _documentService.GetByFolderAsync(_currentFolderId.Value);
+            }
+            else
+            {
+                documents = await _documentService.GetAllAsync();
+            }
             Documents = new ObservableCollection<DocumentDto>(documents);
         }
         finally

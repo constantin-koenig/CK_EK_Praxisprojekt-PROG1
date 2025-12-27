@@ -13,51 +13,44 @@ public class ArchivDbContext : DbContext
     }
 
     public DbSet<Document> Documents => Set<Document>();
-    public DbSet<Category> Categories => Set<Category>();
-    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<Folder> Folders => Set<Folder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
+        // Folder Configuration
+        modelBuilder.Entity<Folder>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+
+            entity.HasOne(e => e.ParentFolder)
+                .WithMany(f => f.Children)
+                .HasForeignKey(e => e.ParentFolderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.Name, e.ParentFolderId }).IsUnique();
+        });
+
         // Document Configuration
         modelBuilder.Entity<Document>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
-            entity.Property(e => e.FilePath).IsRequired().HasMaxLength(1000);
-            entity.Property(e => e.FileType).IsRequired().HasMaxLength(50);
-            entity.Property(e => e.Description).HasMaxLength(2000);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Data).IsRequired();
+            entity.Property(e => e.PlainText);
+            entity.Property(e => e.Sha256).HasMaxLength(64);
 
-            entity.HasOne(e => e.Category)
-                .WithMany(c => c.Documents)
-                .HasForeignKey(e => e.CategoryId)
-                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.Folder)
+                .WithMany(f => f.Documents)
+                .HasForeignKey(e => e.FolderId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasMany(e => e.Tags)
-                .WithMany(t => t.Documents)
-                .UsingEntity(j => j.ToTable("DocumentTags"));
-        });
-
-        // Category Configuration
-        modelBuilder.Entity<Category>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Description).HasMaxLength(500);
-
-            entity.HasOne(e => e.ParentCategory)
-                .WithMany(c => c.SubCategories)
-                .HasForeignKey(e => e.ParentCategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        // Tag Configuration
-        modelBuilder.Entity<Tag>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(50);
-            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasIndex(e => e.Sha256);
+            entity.HasIndex(e => e.FolderId);
         });
     }
 }
