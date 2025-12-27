@@ -1,0 +1,101 @@
+<Window x:Class="ArchivSoftware.Ui.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:ArchivSoftware.Ui.ViewModels"
+        mc:Ignorable="d"
+        Title="ArchivSoftware" 
+        Height="600" 
+        Width="900"
+        WindowStartupLocation="CenterScreen"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Toolbar -->
+        <ToolBar Grid.Row="0" Margin="5">
+            <Button Content="Dokumente" Command="{Binding ShowDocumentsCommand}" Padding="10,5"/>
+            <Button Content="Kategorien" Command="{Binding ShowCategoriesCommand}" Padding="10,5"/>
+            <Separator/>
+            <Button Content="Aktualisieren" Command="{Binding RefreshCommand}" Padding="10,5"/>
+        </ToolBar>
+        
+        <!-- Hauptbereich -->
+        <Grid Grid.Row="1" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Kategorie-Baum -->
+            <GroupBox Header="Kategorien" Grid.Column="0">
+                <TreeView ItemsSource="{Binding CategoryTreeViewModel.Categories}">
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate>
+                            <TextBlock Text="{Binding Name}"/>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </GroupBox>
+            
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
+            
+            <!-- Dokumentenliste -->
+            <GroupBox Header="Dokumente" Grid.Column="2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Suchleiste -->
+                    <Grid Grid.Row="0" Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" 
+                                 Text="{Binding DocumentListViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="5"
+                                 VerticalContentAlignment="Center"/>
+                        <Button Grid.Column="1" 
+                                Content="Suchen" 
+                                Command="{Binding DocumentListViewModel.SearchCommand}"
+                                Padding="10,5"
+                                Margin="5,0,0,0"/>
+                    </Grid>
+                    
+                    <!-- Dokumenten-DataGrid -->
+                    <DataGrid Grid.Row="1" 
+                              ItemsSource="{Binding DocumentListViewModel.Documents}"
+                              SelectedItem="{Binding DocumentListViewModel.SelectedDocument}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              SelectionMode="Single"
+                              Margin="5">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Titel" Binding="{Binding Title}" Width="*"/>
+                            <DataGridTextColumn Header="Typ" Binding="{Binding FileType}" Width="80"/>
+                            <DataGridTextColumn Header="Kategorie" Binding="{Binding CategoryName}" Width="120"/>
+                            <DataGridTextColumn Header="Erstellt" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </GroupBox>
+        </Grid>
+        
+        <!-- Statusleiste -->
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
