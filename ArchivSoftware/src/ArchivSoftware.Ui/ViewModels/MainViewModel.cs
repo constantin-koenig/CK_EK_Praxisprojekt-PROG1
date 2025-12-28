@@ -281,7 +281,7 @@ public class MainViewModel : ViewModelBase
         var openFileDialog = new OpenFileDialog
         {
             Title = "Dokument importieren",
-            Filter = "Textdateien (*.txt)|*.txt|Alle Dateien (*.*)|*.*",
+            Filter = "Alle unterstützten Dateien (*.txt;*.pdf)|*.txt;*.pdf|Textdateien (*.txt)|*.txt|PDF-Dateien (*.pdf)|*.pdf|Alle Dateien (*.*)|*.*",
             Multiselect = false
         };
 

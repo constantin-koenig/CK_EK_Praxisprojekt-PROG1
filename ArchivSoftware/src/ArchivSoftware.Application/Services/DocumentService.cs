@@ -12,10 +12,12 @@ namespace ArchivSoftware.Application.Services;
 public class DocumentService : IDocumentService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITextExtractor _textExtractor;
 
-    public DocumentService(IUnitOfWork unitOfWork)
+    public DocumentService(IUnitOfWork unitOfWork, ITextExtractor textExtractor)
     {
         _unitOfWork = unitOfWork;
+        _textExtractor = textExtractor;
     }
 
     public async Task<DocumentDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -126,12 +128,8 @@ public class DocumentService : IDocumentService
         // Bestimme ContentType basierend auf Extension
         var contentType = GetContentType(extension);
 
-        // PlainText: nur bei .txt Dateien
-        string plainText = string.Empty;
-        if (extension == ".txt")
-        {
-            plainText = await File.ReadAllTextAsync(filePath, Encoding.UTF8, cancellationToken);
-        }
+        // Extrahiere Text mit ITextExtractor
+        var plainText = await _textExtractor.ExtractAsync(filePath);
 
         // Erstelle Document
         var document = Document.Create(title, fileName, contentType, data, folderId, plainText);

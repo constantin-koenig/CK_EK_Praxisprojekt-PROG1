@@ -4,6 +4,7 @@ using ArchivSoftware.Domain.Interfaces;
 using ArchivSoftware.Infrastructure;
 using ArchivSoftware.Infrastructure.Data;
 using ArchivSoftware.Infrastructure.Repositories;
+using ArchivSoftware.Infrastructure.Services;
 using ArchivSoftware.Ui.ViewModels;
 using ArchivSoftware.Ui.Views;
 using Microsoft.EntityFrameworkCore;
@@ -52,6 +53,9 @@ public partial class App : System.Windows.Application
         // Repositories als Scoped
         services.AddScoped<IFolderRepository, FolderRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+
+        // Infrastructure Services
+        services.AddSingleton<ITextExtractor, TextExtractor>();
 
         // Application Services
         services.AddScoped<IFolderService, FolderService>();
