@@ -17,6 +17,49 @@ public class FolderService : IFolderService
         _unitOfWork = unitOfWork;
     }
 
+    /// <summary>
+    /// Stellt sicher, dass ein Root-Ordner existiert. Legt "Root" an, wenn keiner existiert.
+    /// </summary>
+    public async Task EnsureRootFolderExistsAsync(CancellationToken cancellationToken = default)
+    {
+        var rootFolders = await _unitOfWork.Folders.GetRootFoldersAsync(cancellationToken);
+        
+        if (!rootFolders.Any())
+        {
+            var rootFolder = Folder.Create("Root", null);
+            await _unitOfWork.Folders.AddAsync(rootFolder, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Lädt den kompletten Ordnerbaum (Root-Ordner mit allen Children rekursiv).
+    /// </summary>
+    public async Task<List<Folder>> GetFolderTreeAsync(CancellationToken cancellationToken = default)
+    {
+        var rootFolders = await _unitOfWork.Folders.GetRootFoldersAsync(cancellationToken);
+        var result = new List<Folder>();
+
+        foreach (var folder in rootFolders)
+        {
+            await LoadChildrenRecursivelyAsync(folder, cancellationToken);
+            result.Add(folder);
+        }
+
+        return result;
+    }
+
+    private async Task LoadChildrenRecursivelyAsync(Folder folder, CancellationToken cancellationToken)
+    {
+        var children = await _unitOfWork.Folders.GetChildrenAsync(folder.Id, cancellationToken);
+        
+        foreach (var child in children)
+        {
+            folder.Children.Add(child);
+            await LoadChildrenRecursivelyAsync(child, cancellationToken);
+        }
+    }
+
     public async Task<FolderDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var folder = await _unitOfWork.Folders.GetByIdAsync(id, cancellationToken);
@@ -41,7 +84,7 @@ public class FolderService : IFolderService
         return folders.Select(MapToDto);
     }
 
-    public async Task<IEnumerable<FolderTreeDto>> GetFolderTreeAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<FolderTreeDto>> GetFolderTreeDtosAsync(CancellationToken cancellationToken = default)
     {
         var rootFolders = await _unitOfWork.Folders.GetRootFoldersAsync(cancellationToken);
         var treeDtos = new List<FolderTreeDto>();

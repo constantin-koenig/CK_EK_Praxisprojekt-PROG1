@@ -23,6 +23,16 @@ public interface IFolderRepository : IRepository<Folder>
     Task<Folder?> GetWithChildrenAndDocumentsAsync(Guid folderId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lädt Root-Ordner mit allen Children rekursiv (für Baumdarstellung).
+    /// </summary>
+    Task<IEnumerable<Folder>> GetRootWithChildrenAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Prüft, ob mindestens ein Root-Ordner existiert.
+    /// </summary>
+    Task<bool> ExistsRootAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Sucht Ordner nach Name.
     /// </summary>
     Task<IEnumerable<Folder>> SearchByNameAsync(string searchTerm, CancellationToken cancellationToken = default);
@@ -31,4 +41,9 @@ public interface IFolderRepository : IRepository<Folder>
     /// Prüft, ob ein Ordnername im selben Parent-Ordner bereits existiert.
     /// </summary>
     Task<bool> ExistsWithNameAsync(string name, Guid? parentFolderId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Speichert alle Änderungen.
+    /// </summary>
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

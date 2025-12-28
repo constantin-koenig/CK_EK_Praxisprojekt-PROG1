@@ -1,4 +1,7 @@
+using ArchivSoftware.Application.Interfaces;
+using ArchivSoftware.Application.Services;
 using ArchivSoftware.Domain.Interfaces;
+using ArchivSoftware.Infrastructure;
 using ArchivSoftware.Infrastructure.Data;
 using ArchivSoftware.Infrastructure.Repositories;
 using ArchivSoftware.Ui.ViewModels;
@@ -43,9 +46,16 @@ public partial class App : System.Windows.Application
         services.AddDbContext<ArchivSoftwareDbContext>(options =>
             options.UseSqlServer(connectionString));
 
+        // Unit of Work
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
         // Repositories als Scoped
         services.AddScoped<IFolderRepository, FolderRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+
+        // Application Services
+        services.AddScoped<IFolderService, FolderService>();
+        services.AddScoped<IDocumentService, DocumentService>();
 
         // ViewModels
         services.AddTransient<MainViewModel>();

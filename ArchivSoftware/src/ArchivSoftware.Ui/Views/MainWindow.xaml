@@ -20,9 +20,6 @@
         
         <!-- Toolbar -->
         <ToolBar Grid.Row="0" Margin="5">
-            <Button Content="Dokumente" Command="{Binding ShowDocumentsCommand}" Padding="10,5"/>
-            <Button Content="Ordner" Command="{Binding ShowFoldersCommand}" Padding="10,5"/>
-            <Separator/>
             <Button Content="Aktualisieren" Command="{Binding RefreshCommand}" Padding="10,5"/>
         </ToolBar>
         
@@ -36,58 +33,32 @@
             
             <!-- Ordner-Baum -->
             <GroupBox Header="Ordner" Grid.Column="0">
-                <TreeView ItemsSource="{Binding FolderTreeViewModel.Folders}">
+                <TreeView ItemsSource="{Binding Folders}"
+                          SelectedItemChanged="TreeView_SelectedItemChanged">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <TextBlock Text="{Binding Name}"/>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                        </Style>
+                    </TreeView.ItemContainerStyle>
                 </TreeView>
             </GroupBox>
             
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
             
-            <!-- Dokumentenliste -->
-            <GroupBox Header="Dokumente" Grid.Column="2">
+            <!-- Details-Bereich -->
+            <GroupBox Header="Details" Grid.Column="2">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    
-                    <!-- Suchleiste -->
-                    <Grid Grid.Row="0" Margin="5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" 
-                                 Text="{Binding DocumentListViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Padding="5"
-                                 VerticalContentAlignment="Center"/>
-                        <Button Grid.Column="1" 
-                                Content="Suchen" 
-                                Command="{Binding DocumentListViewModel.SearchCommand}"
-                                Padding="10,5"
-                                Margin="5,0,0,0"/>
-                    </Grid>
-                    
-                    <!-- Dokumenten-DataGrid -->
-                    <DataGrid Grid.Row="1" 
-                              ItemsSource="{Binding DocumentListViewModel.Documents}"
-                              SelectedItem="{Binding DocumentListViewModel.SelectedDocument}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              SelectionMode="Single"
-                              Margin="5">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Titel" Binding="{Binding Title}" Width="*"/>
-                            <DataGridTextColumn Header="Dateiname" Binding="{Binding FileName}" Width="150"/>
-                            <DataGridTextColumn Header="Typ" Binding="{Binding ContentType}" Width="100"/>
-                            <DataGridTextColumn Header="Ordner" Binding="{Binding FolderName}" Width="120"/>
-                            <DataGridTextColumn Header="Erstellt" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy}" Width="100"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <TextBlock Text="Details" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center"
+                               FontSize="24"
+                               Foreground="Gray"/>
                 </Grid>
             </GroupBox>
         </Grid>

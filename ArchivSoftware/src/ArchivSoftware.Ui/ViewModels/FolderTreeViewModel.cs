@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using ArchivSoftware.Application.DTOs;
 using ArchivSoftware.Application.Interfaces;
+using ArchivSoftware.Domain.Entities;
 
 namespace ArchivSoftware.Ui.ViewModels;
 
@@ -11,8 +12,8 @@ namespace ArchivSoftware.Ui.ViewModels;
 public class FolderTreeViewModel : ViewModelBase
 {
     private readonly IFolderService _folderService;
-    private ObservableCollection<FolderTreeDto> _folders = new();
-    private FolderTreeDto? _selectedFolder;
+    private ObservableCollection<Folder> _folders = new();
+    private Folder? _selectedFolder;
     private bool _isLoading;
 
     public FolderTreeViewModel(IFolderService folderService)
@@ -23,13 +24,13 @@ public class FolderTreeViewModel : ViewModelBase
         CreateFolderCommand = new RelayCommand<string>(async name => await CreateFolderAsync(name));
     }
 
-    public ObservableCollection<FolderTreeDto> Folders
+    public ObservableCollection<Folder> Folders
     {
         get => _folders;
         set => SetProperty(ref _folders, value);
     }
 
-    public FolderTreeDto? SelectedFolder
+    public Folder? SelectedFolder
     {
         get => _selectedFolder;
         set => SetProperty(ref _selectedFolder, value);
@@ -52,7 +53,7 @@ public class FolderTreeViewModel : ViewModelBase
         try
         {
             var folders = await _folderService.GetFolderTreeAsync();
-            Folders = new ObservableCollection<FolderTreeDto>(folders);
+            Folders = new ObservableCollection<Folder>(folders);
         }
         finally
         {
@@ -60,7 +61,7 @@ public class FolderTreeViewModel : ViewModelBase
         }
     }
 
-    public void OnFolderSelected(FolderTreeDto? folder)
+    public void OnFolderSelected(Folder? folder)
     {
         SelectedFolder = folder;
         FolderSelected?.Invoke(folder?.Id);
