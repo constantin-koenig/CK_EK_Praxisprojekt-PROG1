@@ -1,16 +1,19 @@
 using ArchivSoftware.Application.Interfaces;
+using ArchivSoftware.Application.Options;
 using ArchivSoftware.Application.Services;
 using ArchivSoftware.Domain.Interfaces;
 using ArchivSoftware.Infrastructure;
 using ArchivSoftware.Infrastructure.Data;
 using ArchivSoftware.Infrastructure.Repositories;
 using ArchivSoftware.Infrastructure.Services;
+using ArchivSoftware.Ui.Services;
 using ArchivSoftware.Ui.ViewModels;
 using ArchivSoftware.Ui.Views;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 
@@ -43,6 +46,9 @@ public partial class App : System.Windows.Application
         // Connection String aus appsettings.json
         var connectionString = configuration.GetConnectionString("ArchivSoftwareDb");
 
+        // Options
+        services.Configure<ImportWatcherOptions>(configuration.GetSection("ImportWatcher"));
+
         // DbContext mit SQL Server
         services.AddDbContext<ArchivSoftwareDbContext>(options =>
             options.UseSqlServer(connectionString));
@@ -56,6 +62,13 @@ public partial class App : System.Windows.Application
 
         // Infrastructure Services
         services.AddSingleton<ITextExtractor, TextExtractor>();
+        
+        // Import-Log: Singleton ObservableCollection und ImportLogSink
+        var importLog = new ObservableCollection<ImportLogItem>();
+        services.AddSingleton(importLog);
+        services.AddSingleton<IImportLogSink>(sp => new ImportLogSink(importLog));
+        
+        services.AddHostedService<ImportWatcherService>();
 
         // Application Services
         services.AddScoped<IFolderService, FolderService>();

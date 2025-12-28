@@ -1,10 +1,13 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using ArchivSoftware.Ui.Helpers;
+using ArchivSoftware.Ui.Services;
 using ArchivSoftware.Ui.ViewModels;
+using Microsoft.Extensions.Configuration;
 
 namespace ArchivSoftware.Ui.Views;
 
@@ -71,6 +74,22 @@ public partial class MainWindow : Window
         if (e.Key == Key.Enter && DataContext is MainViewModel viewModel)
         {
             viewModel.SearchCommand.Execute(null);
+        }
+    }
+
+    private void ShowImportLog_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            var importPath = "C:\\ArchivSoftware\\Import"; // Default
+            var logVm = new ImportLogViewModel(vm.ImportLog, importPath);
+            
+            var window = new ImportLogWindow
+            {
+                DataContext = logVm,
+                Owner = this
+            };
+            window.Show();
         }
     }
 }

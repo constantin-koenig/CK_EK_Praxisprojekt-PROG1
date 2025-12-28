@@ -33,6 +33,38 @@ public class FolderService : IFolderService
     }
 
     /// <summary>
+    /// Stellt sicher, dass ein spezieller Ordner unter Root existiert.
+    /// Legt ihn an, falls er fehlt, und gibt dessen ID zurück.
+    /// </summary>
+    /// <param name="name">Name des speziellen Ordners.</param>
+    /// <returns>Die ID des Ordners.</returns>
+    public async Task<Guid> EnsureSpecialFolderExistsAsync(string name, CancellationToken cancellationToken = default)
+    {
+        // Stelle sicher, dass Root existiert
+        await EnsureRootFolderExistsAsync(cancellationToken);
+
+        // Hole Root-Ordner
+        var rootFolders = await _unitOfWork.Folders.GetRootFoldersAsync(cancellationToken);
+        var rootFolder = rootFolders.First();
+
+        // Prüfe, ob der spezielle Ordner bereits existiert
+        var children = await _unitOfWork.Folders.GetChildrenAsync(rootFolder.Id, cancellationToken);
+        var specialFolder = children.FirstOrDefault(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+        if (specialFolder != null)
+        {
+            return specialFolder.Id;
+        }
+
+        // Erstelle den speziellen Ordner
+        var newFolder = Folder.Create(name, rootFolder.Id);
+        await _unitOfWork.Folders.AddAsync(newFolder, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return newFolder.Id;
+    }
+
+    /// <summary>
     /// Lädt den kompletten Ordnerbaum (Root-Ordner mit allen Children rekursiv).
     /// </summary>
     public async Task<List<Folder>> GetFolderTreeAsync(CancellationToken cancellationToken = default)

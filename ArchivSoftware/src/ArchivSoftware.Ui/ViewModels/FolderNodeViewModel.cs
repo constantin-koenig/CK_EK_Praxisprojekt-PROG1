@@ -61,6 +61,26 @@ public class FolderNodeViewModel : ViewModelBase
         set => SetProperty(ref _isSelected, value);
     }
 
+    /// <summary>
+    /// Icon für den Ordner basierend auf dem Namen.
+    /// </summary>
+    public string Icon
+    {
+        get
+        {
+            // Root-Ordner
+            if (Parent == null && Name.Equals("Root", StringComparison.OrdinalIgnoreCase))
+                return "🏠";
+            
+            // Autoimport-Ordner
+            if (Name.Equals("Autoimport", StringComparison.OrdinalIgnoreCase))
+                return "📥";
+            
+            // Standard-Ordner
+            return "📁";
+        }
+    }
+
     public ObservableCollection<FolderNodeViewModel> Children { get; }
 
     /// <summary>

@@ -32,11 +32,19 @@ public class MainViewModel : ViewModelBase
     private string _selectedDocumentText = string.Empty;
     private string _selectedDocumentTitle = string.Empty;
 
-    public MainViewModel(IDocumentService documentService, IFolderService folderService, ISearchService searchService)
+    // Import-Log (wird via DI injiziert)
+    private ObservableCollection<ImportLogItem> _importLog;
+
+    public MainViewModel(
+        IDocumentService documentService, 
+        IFolderService folderService, 
+        ISearchService searchService,
+        ObservableCollection<ImportLogItem> importLog)
     {
         _documentService = documentService;
         _folderService = folderService;
         _searchService = searchService;
+        _importLog = importLog;
 
         ShowDocumentsCommand = new RelayCommand(() => { });
         ShowFoldersCommand = new RelayCommand(() => { });
@@ -47,6 +55,15 @@ public class MainViewModel : ViewModelBase
 
         // Lade Ordner beim Start
         _ = InitializeAsync();
+    }
+
+    /// <summary>
+    /// Import-Log für den ImportWatcher.
+    /// </summary>
+    public ObservableCollection<ImportLogItem> ImportLog
+    {
+        get => _importLog;
+        set => SetProperty(ref _importLog, value);
     }
 
     public ObservableCollection<FolderNodeViewModel> Folders
@@ -153,6 +170,9 @@ public class MainViewModel : ViewModelBase
             
             // Stelle sicher, dass Root-Ordner existiert
             await _folderService.EnsureRootFolderExistsAsync();
+
+            // Stelle sicher, dass der Autoimport-Ordner existiert
+            await _folderService.EnsureSpecialFolderExistsAsync("Autoimport");
 
             // Lade Ordnerbaum
             var folders = await _folderService.GetFolderTreeAsync();
