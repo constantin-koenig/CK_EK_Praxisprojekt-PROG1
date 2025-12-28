@@ -43,6 +43,11 @@ public interface IFolderRepository : IRepository<Folder>
     Task<bool> ExistsWithNameAsync(string name, Guid? parentFolderId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Prüft, ob ein Kind-Ordner mit dem angegebenen Namen existiert.
+    /// </summary>
+    Task<bool> ChildFolderExistsAsync(Guid parentId, string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Speichert alle Änderungen.
     /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

@@ -20,6 +20,8 @@
         
         <!-- Toolbar -->
         <ToolBar Grid.Row="0" Margin="5">
+            <Button Content="Neuer Ordner" Command="{Binding CreateFolderCommand}" Padding="10,5"/>
+            <Separator/>
             <Button Content="Aktualisieren" Command="{Binding RefreshCommand}" Padding="10,5"/>
         </ToolBar>
         

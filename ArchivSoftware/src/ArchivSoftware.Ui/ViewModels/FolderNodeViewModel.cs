@@ -10,7 +10,7 @@ public class FolderNodeViewModel : ViewModelBase
 {
     private string _name = string.Empty;
     private Guid _id;
-    private Guid? _parentFolderId;
+    private FolderNodeViewModel? _parent;
     private bool _isExpanded;
     private bool _isSelected;
 
@@ -19,15 +19,15 @@ public class FolderNodeViewModel : ViewModelBase
         Children = new ObservableCollection<FolderNodeViewModel>();
     }
 
-    public FolderNodeViewModel(Folder folder) : this()
+    public FolderNodeViewModel(Folder folder, FolderNodeViewModel? parent = null) : this()
     {
         Id = folder.Id;
         Name = folder.Name;
-        ParentFolderId = folder.ParentFolderId;
+        Parent = parent;
 
         foreach (var child in folder.Children)
         {
-            Children.Add(new FolderNodeViewModel(child));
+            Children.Add(new FolderNodeViewModel(child, this));
         }
     }
 
@@ -43,10 +43,10 @@ public class FolderNodeViewModel : ViewModelBase
         set => SetProperty(ref _name, value);
     }
 
-    public Guid? ParentFolderId
+    public FolderNodeViewModel? Parent
     {
-        get => _parentFolderId;
-        set => SetProperty(ref _parentFolderId, value);
+        get => _parent;
+        set => SetProperty(ref _parent, value);
     }
 
     public bool IsExpanded
@@ -71,7 +71,7 @@ public class FolderNodeViewModel : ViewModelBase
         var result = new ObservableCollection<FolderNodeViewModel>();
         foreach (var folder in folders)
         {
-            result.Add(new FolderNodeViewModel(folder));
+            result.Add(new FolderNodeViewModel(folder, null));
         }
         return result;
     }

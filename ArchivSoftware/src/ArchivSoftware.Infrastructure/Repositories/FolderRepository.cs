@@ -111,6 +111,13 @@ public class FolderRepository : Repository<Folder>, IFolderRepository
             .AnyAsync(f => f.Name == name && f.ParentFolderId == parentFolderId, cancellationToken);
     }
 
+    public async Task<bool> ChildFolderExistsAsync(Guid parentId, string name, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .AnyAsync(f => f.ParentFolderId == parentId && f.Name == name, cancellationToken);
+    }
+
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.SaveChangesAsync(cancellationToken);

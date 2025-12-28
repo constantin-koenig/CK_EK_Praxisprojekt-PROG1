@@ -10,6 +10,7 @@ public interface IFolderService
 {
     Task EnsureRootFolderExistsAsync(CancellationToken cancellationToken = default);
     Task<List<Folder>> GetFolderTreeAsync(CancellationToken cancellationToken = default);
+    Task<Folder> CreateFolderAsync(Guid parentFolderId, string name, CancellationToken cancellationToken = default);
     Task<FolderDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IEnumerable<FolderDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<FolderDto>> GetRootFoldersAsync(CancellationToken cancellationToken = default);

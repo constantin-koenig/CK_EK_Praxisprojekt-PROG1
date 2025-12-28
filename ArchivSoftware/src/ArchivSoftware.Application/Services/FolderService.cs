@@ -37,16 +37,39 @@ public class FolderService : IFolderService
     /// </summary>
     public async Task<List<Folder>> GetFolderTreeAsync(CancellationToken cancellationToken = default)
     {
-        var rootFolders = await _unitOfWork.Folders.GetRootFoldersAsync(cancellationToken);
-        var result = new List<Folder>();
+        // Verwende GetRootWithChildrenAsync, das den Baum korrekt aufbaut
+        var rootFolders = await _unitOfWork.Folders.GetRootWithChildrenAsync(cancellationToken);
+        return rootFolders.ToList();
+    }
 
-        foreach (var folder in rootFolders)
+    /// <summary>
+    /// Erstellt einen neuen Unterordner.
+    /// </summary>
+    /// <param name="parentFolderId">ID des übergeordneten Ordners.</param>
+    /// <param name="name">Name des neuen Ordners.</param>
+    /// <returns>Der neu erstellte Ordner.</returns>
+    /// <exception cref="KeyNotFoundException">Wenn der Parent-Ordner nicht existiert.</exception>
+    /// <exception cref="InvalidOperationException">Wenn bereits ein Child mit gleichem Namen existiert.</exception>
+    public async Task<Folder> CreateFolderAsync(Guid parentFolderId, string name, CancellationToken cancellationToken = default)
+    {
+        // Lade ParentFolder
+        var parentFolder = await _unitOfWork.Folders.GetByIdAsync(parentFolderId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Der übergeordnete Ordner mit ID {parentFolderId} wurde nicht gefunden.");
+
+        // Prüfe, ob bereits ein Child mit gleichem Namen existiert
+        if (await _unitOfWork.Folders.ExistsWithNameAsync(name, parentFolderId, cancellationToken))
         {
-            await LoadChildrenRecursivelyAsync(folder, cancellationToken);
-            result.Add(folder);
+            throw new InvalidOperationException($"Ein Ordner mit dem Namen '{name}' existiert bereits in diesem Verzeichnis.");
         }
 
-        return result;
+        // Erstelle neuen Folder
+        var newFolder = Folder.Create(name, parentFolderId);
+
+        // Speichere über Repository
+        await _unitOfWork.Folders.AddAsync(newFolder, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return newFolder;
     }
 
     private async Task LoadChildrenRecursivelyAsync(Folder folder, CancellationToken cancellationToken)

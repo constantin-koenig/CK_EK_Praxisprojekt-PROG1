@@ -38,6 +38,18 @@ public class Folder : BaseEntity
         };
     }
 
+    /// <summary>
+    /// Benennt den Ordner um.
+    /// </summary>
+    /// <param name="name">Der neue Name des Ordners.</param>
+    /// <exception cref="ArgumentException">Wenn der Name ungültig ist.</exception>
+    public void Rename(string name)
+    {
+        ValidateName(name);
+        _name = name;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     private static void ValidateName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -45,9 +57,9 @@ public class Folder : BaseEntity
             throw new ArgumentException("Der Ordnername darf nicht leer sein.", nameof(name));
         }
 
-        if (name.Length > 255)
+        if (name.Length > 200)
         {
-            throw new ArgumentException("Der Ordnername darf maximal 255 Zeichen lang sein.", nameof(name));
+            throw new ArgumentException("Der Ordnername darf maximal 200 Zeichen lang sein.", nameof(name));
         }
 
         // Prüfe auf ungültige Zeichen im Dateinamen
