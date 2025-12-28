@@ -31,9 +31,10 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
     public async Task<IEnumerable<Document>> GetByFolderIdAsync(Guid folderId, CancellationToken cancellationToken = default)
     {
         return await _dbSet
+            .AsNoTracking()
             .Include(d => d.Folder)
             .Where(d => d.FolderId == folderId)
-            .OrderBy(d => d.Title)
+            .OrderByDescending(d => d.CreatedAt)
             .ToListAsync(cancellationToken);
     }
 

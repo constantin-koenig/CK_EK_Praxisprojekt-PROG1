@@ -71,13 +71,17 @@ public partial class App : System.Windows.Application
         await _host!.StartAsync();
 
         // Datenbank erstellen falls nicht vorhanden
-        using var scope = _host.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ArchivSoftwareDbContext>();
-        await context.Database.EnsureCreatedAsync();
+        using (var scope = _host.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ArchivSoftwareDbContext>();
+            await context.Database.EnsureCreatedAsync();
+        }
 
-        // MainWindow via DI öffnen
-        var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-        mainWindow.DataContext = _host.Services.GetRequiredService<MainViewModel>();
+        // MainWindow und MainViewModel aus einem Scope holen
+        // Der Scope bleibt für die Lebensdauer der App offen
+        var appScope = _host.Services.CreateScope();
+        var mainWindow = appScope.ServiceProvider.GetRequiredService<MainWindow>();
+        mainWindow.DataContext = appScope.ServiceProvider.GetRequiredService<MainViewModel>();
         mainWindow.Show();
 
         base.OnStartup(e);

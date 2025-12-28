@@ -4,12 +4,17 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:ArchivSoftware.Ui.ViewModels"
+        xmlns:conv="clr-namespace:ArchivSoftware.Ui.Converters"
         mc:Ignorable="d"
         Title="ArchivSoftware" 
         Height="600" 
         Width="900"
         WindowStartupLocation="CenterScreen"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
+    
+    <Window.Resources>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+    </Window.Resources>
     
     <Grid>
         <Grid.RowDefinitions>
@@ -21,6 +26,7 @@
         <!-- Toolbar -->
         <ToolBar Grid.Row="0" Margin="5">
             <Button Content="Neuer Ordner" Command="{Binding CreateFolderCommand}" Padding="10,5"/>
+            <Button Content="Dokument importieren" Command="{Binding AddDocumentCommand}" Padding="10,5"/>
             <Separator/>
             <Button Content="Aktualisieren" Command="{Binding RefreshCommand}" Padding="10,5"/>
         </ToolBar>
@@ -53,14 +59,45 @@
             
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
             
-            <!-- Details-Bereich -->
-            <GroupBox Header="Details" Grid.Column="2">
+            <!-- Dokumente-Bereich -->
+            <GroupBox Header="Dokumente" Grid.Column="2">
                 <Grid>
-                    <TextBlock Text="Details" 
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Button zum Hinzufügen -->
+                    <Button Content="Dokument hinzufügen" 
+                            Command="{Binding AddDocumentCommand}" 
+                            HorizontalAlignment="Left"
+                            Padding="10,5"
+                            Margin="5"
+                            Grid.Row="0"/>
+                    
+                    <!-- Dokumentenliste -->
+                    <ListView ItemsSource="{Binding Documents}" 
+                              SelectedItem="{Binding SelectedDocument}"
+                              Grid.Row="1"
+                              Margin="5,0,5,5">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Titel" Width="200" DisplayMemberBinding="{Binding Title}"/>
+                                <GridViewColumn Header="Dateiname" Width="180" DisplayMemberBinding="{Binding FileName}"/>
+                                <GridViewColumn Header="Erstellt" Width="140" DisplayMemberBinding="{Binding CreatedAt, StringFormat={}{0:dd.MM.yyyy HH:mm}}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    
+                    <!-- Platzhalter wenn kein Ordner ausgewählt -->
+                    <TextBlock Text="Wählen Sie einen Ordner aus, um Dokumente anzuzeigen" 
                                HorizontalAlignment="Center" 
                                VerticalAlignment="Center"
-                               FontSize="24"
-                               Foreground="Gray"/>
+                               FontSize="14"
+                               Foreground="Gray"
+                               Grid.Row="1"
+                               IsHitTestVisible="False"
+                               Visibility="{Binding SelectedFolder, Converter={StaticResource NullToVisibilityConverter}}"/>
                 </Grid>
             </GroupBox>
         </Grid>
