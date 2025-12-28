@@ -9,12 +9,12 @@ namespace ArchivSoftware.Infrastructure;
 /// </summary>
 public class UnitOfWork : IUnitOfWork
 {
-    private readonly ArchivDbContext _context;
+    private readonly ArchivSoftwareDbContext _context;
     private IDocumentRepository? _documentRepository;
     private IFolderRepository? _folderRepository;
     private bool _disposed;
 
-    public UnitOfWork(ArchivDbContext context)
+    public UnitOfWork(ArchivSoftwareDbContext context)
     {
         _context = context;
     }

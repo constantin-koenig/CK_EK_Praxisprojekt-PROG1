@@ -10,7 +10,7 @@ namespace ArchivSoftware.Infrastructure.Repositories;
 /// </summary>
 public class DocumentRepository : Repository<Document>, IDocumentRepository
 {
-    public DocumentRepository(ArchivDbContext context) : base(context)
+    public DocumentRepository(ArchivSoftwareDbContext context) : base(context)
     {
     }
 

@@ -10,7 +10,7 @@ namespace ArchivSoftware.Infrastructure.Repositories;
 /// </summary>
 public class FolderRepository : Repository<Folder>, IFolderRepository
 {
-    public FolderRepository(ArchivDbContext context) : base(context)
+    public FolderRepository(ArchivSoftwareDbContext context) : base(context)
     {
     }
 

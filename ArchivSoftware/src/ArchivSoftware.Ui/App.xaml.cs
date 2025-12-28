@@ -1,62 +1,85 @@
-using ArchivSoftware.Infrastructure;
+using ArchivSoftware.Domain.Interfaces;
 using ArchivSoftware.Infrastructure.Data;
+using ArchivSoftware.Infrastructure.Repositories;
 using ArchivSoftware.Ui.ViewModels;
+using ArchivSoftware.Ui.Views;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System.IO;
 using System.Windows;
 
 namespace ArchivSoftware.Ui;
 
 /// <summary>
-/// Hauptanwendungsklasse.
+/// Hauptanwendungsklasse mit Host-basierter Dependency Injection.
 /// </summary>
 public partial class App : System.Windows.Application
 {
-    private ServiceProvider? _serviceProvider;
+    private IHost? _host;
 
     public App()
     {
-        var services = new ServiceCollection();
-        ConfigureServices(services);
-        _serviceProvider = services.BuildServiceProvider();
+        _host = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((context, config) =>
+            {
+                config.SetBasePath(Directory.GetCurrentDirectory());
+                config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+            })
+            .ConfigureServices((context, services) =>
+            {
+                ConfigureServices(context.Configuration, services);
+            })
+            .Build();
     }
 
-    private void ConfigureServices(IServiceCollection services)
+    private void ConfigureServices(IConfiguration configuration, IServiceCollection services)
     {
-        // Verwende SQLite für einfachere Entwicklung
-        var connectionString = "Data Source=archiv.db";
-        
-        services.AddDbContext<ArchivDbContext>(options =>
-            options.UseSqlite(connectionString));
+        // Connection String aus appsettings.json
+        var connectionString = configuration.GetConnectionString("ArchivSoftwareDb");
 
-        services.AddInfrastructure(connectionString);
-        services.AddApplicationServices();
+        // DbContext mit SQL Server
+        services.AddDbContext<ArchivSoftwareDbContext>(options =>
+            options.UseSqlServer(connectionString));
+
+        // Repositories als Scoped
+        services.AddScoped<IFolderRepository, FolderRepository>();
+        services.AddScoped<IDocumentRepository, DocumentRepository>();
 
         // ViewModels
         services.AddTransient<MainViewModel>();
         services.AddTransient<DocumentListViewModel>();
         services.AddTransient<FolderTreeViewModel>();
+
+        // MainWindow
+        services.AddTransient<MainWindow>();
     }
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
-        base.OnStartup(e);
+        await _host!.StartAsync();
 
         // Datenbank erstellen falls nicht vorhanden
-        using var scope = _serviceProvider!.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ArchivDbContext>();
-        context.Database.EnsureCreated();
+        using var scope = _host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ArchivSoftwareDbContext>();
+        await context.Database.EnsureCreatedAsync();
 
-        var mainWindow = new Views.MainWindow
-        {
-            DataContext = _serviceProvider.GetRequiredService<MainViewModel>()
-        };
+        // MainWindow via DI öffnen
+        var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        mainWindow.DataContext = _host.Services.GetRequiredService<MainViewModel>();
         mainWindow.Show();
+
+        base.OnStartup(e);
     }
 
-    protected override void OnExit(ExitEventArgs e)
+    protected override async void OnExit(ExitEventArgs e)
     {
-        _serviceProvider?.Dispose();
+        if (_host != null)
+        {
+            await _host.StopAsync();
+            _host.Dispose();
+        }
         base.OnExit(e);
     }
 }

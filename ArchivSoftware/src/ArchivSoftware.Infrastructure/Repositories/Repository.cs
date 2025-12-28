@@ -11,10 +11,10 @@ namespace ArchivSoftware.Infrastructure.Repositories;
 /// <typeparam name="T">Entity-Typ.</typeparam>
 public class Repository<T> : IRepository<T> where T : BaseEntity
 {
-    protected readonly ArchivDbContext _context;
+    protected readonly ArchivSoftwareDbContext _context;
     protected readonly DbSet<T> _dbSet;
 
-    public Repository(ArchivDbContext context)
+    public Repository(ArchivSoftwareDbContext context)
     {
         _context = context;
         _dbSet = context.Set<T>();
