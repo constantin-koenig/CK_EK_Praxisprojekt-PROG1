@@ -354,8 +354,8 @@ public class MainViewModel : ViewModelBase
         // OpenFileDialog öffnen
         var openFileDialog = new OpenFileDialog
         {
-            Title = "Dokument importieren",
-            Filter = "Alle unterstützten Dateien (*.txt;*.pdf)|*.txt;*.pdf|Textdateien (*.txt)|*.txt|PDF-Dateien (*.pdf)|*.pdf|Alle Dateien (*.*)|*.*",
+            Title = "Dokument importieren (nur PDF/DOCX)",
+            Filter = ArchivSoftware.Application.FileTypePolicy.OpenFileDialogFilter,
             Multiselect = false
         };
 

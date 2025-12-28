@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using ArchivSoftware.Application;
 using ArchivSoftware.Application.Interfaces;
 using ArchivSoftware.Application.Options;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,7 @@ namespace ArchivSoftware.Infrastructure.Services;
 
 /// <summary>
 /// Background-Service der einen Ordner überwacht und neue Dateien automatisch importiert.
+/// Nur PDF und DOCX Dateien werden importiert.
 /// </summary>
 public class ImportWatcherService : BackgroundService
 {
@@ -20,7 +22,6 @@ public class ImportWatcherService : BackgroundService
     private readonly Channel<string> _fileChannel;
     private FileSystemWatcher? _watcher;
 
-    private static readonly string[] AllowedExtensions = { ".pdf", ".txt" };
     private const int MaxRetries = 10;
     private const int RetryDelayMs = 500;
 
@@ -94,10 +95,11 @@ public class ImportWatcherService : BackgroundService
         var extension = Path.GetExtension(e.FullPath).ToLowerInvariant();
         var fileName = Path.GetFileName(e.FullPath);
 
-        if (!AllowedExtensions.Contains(extension))
+        // Zentrale Prüfung über FileTypePolicy
+        if (!FileTypePolicy.IsAllowed(e.FullPath))
         {
             _logger.LogDebug("ImportWatcher: Datei ignoriert (nicht unterstützt): {FileName}", e.Name);
-            _importLogSink?.Add(fileName, ImportStatus.Ignored, $"Dateityp {extension} nicht unterstützt");
+            _importLogSink?.Add(fileName, ImportStatus.Ignored, $"Dateityp {extension} nicht erlaubt (nur PDF/DOCX)");
             return;
         }
 
@@ -201,6 +203,12 @@ public class ImportWatcherService : BackgroundService
             {
                 _logger.LogWarning(ex, "ImportWatcher: Konnte Quelldatei nicht löschen: {FilePath}", filePath);
             }
+        }
+        catch (NotSupportedException ex)
+        {
+            // Dateityp nicht erlaubt - als Ignored loggen
+            _logger.LogWarning("ImportWatcher: Dateityp nicht erlaubt: {FilePath} - {Message}", filePath, ex.Message);
+            _importLogSink?.Add(fileName, ImportStatus.Ignored, ex.Message);
         }
         catch (Exception ex)
         {

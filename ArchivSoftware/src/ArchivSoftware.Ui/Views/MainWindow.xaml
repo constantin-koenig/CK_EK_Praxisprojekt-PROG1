@@ -86,11 +86,47 @@
                 <!-- Dokumente/Suchergebnisse -->
                 <GroupBox Grid.Row="0">
                     <GroupBox.Header>
-                        <TextBlock>
-                            <Run Text="Dokumente"/>
-                            <Run Text=" - Suchergebnisse" Foreground="Blue" 
-                                 x:Name="SearchResultsHeader"/>
-                        </TextBlock>
+                        <Grid>
+                            <!-- Suchergebnisse (wenn Suche aktiv) -->
+                            <TextBlock Text="Suchergebnisse"
+                                       Foreground="White"
+                                       Visibility="{Binding SearchResults.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+                            <!-- Ordnerinhalt (wenn Ordner ausgewählt und keine Suche) -->
+                            <TextBlock Text="{Binding SelectedFolder.Name, StringFormat='Ordnerinhalt: {0}'}"
+                                       Foreground="White">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SearchResults.Count, Converter={StaticResource CountToVisibilityConverter}}" Value="Visible">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedFolder}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <!-- Standard (wenn nichts ausgewählt) -->
+                            <TextBlock Text="Dokumente"
+                                       Foreground="White">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SelectedFolder}" Value="{x:Null}"/>
+                                                    <Condition Binding="{Binding SearchResults.Count}" Value="0"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
                     </GroupBox.Header>
                     <Grid>
                         <Grid.RowDefinitions>

@@ -104,9 +104,17 @@ public class DocumentService : IDocumentService
 
     /// <summary>
     /// Importiert eine Datei vom Dateisystem und speichert sie als Dokument.
+    /// Nur PDF und DOCX Dateien sind erlaubt.
     /// </summary>
+    /// <exception cref="NotSupportedException">Wenn der Dateityp nicht erlaubt ist.</exception>
     public async Task<Document> ImportFileAsync(Guid folderId, string filePath, CancellationToken cancellationToken = default)
     {
+        // Prüfe ob Dateityp erlaubt ist
+        if (!FileTypePolicy.IsAllowed(filePath))
+        {
+            throw new NotSupportedException(FileTypePolicy.NotAllowedMessage);
+        }
+
         // Prüfe ob Datei existiert
         if (!File.Exists(filePath))
         {
@@ -123,10 +131,9 @@ public class DocumentService : IDocumentService
         // Extrahiere Dateiname und Extension
         var fileName = Path.GetFileName(filePath);
         var title = Path.GetFileNameWithoutExtension(filePath);
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
 
-        // Bestimme ContentType basierend auf Extension
-        var contentType = GetContentType(extension);
+        // Bestimme ContentType über zentrale Policy
+        var contentType = FileTypePolicy.GetContentType(filePath);
 
         // Extrahiere Text mit ITextExtractor
         var plainText = await _textExtractor.ExtractAsync(filePath);
@@ -149,40 +156,12 @@ public class DocumentService : IDocumentService
     }
 
     /// <summary>
-    /// Gibt den ContentType basierend auf der Dateiendung zurück.
+    /// (Nicht mehr verwendet - ContentType wird über FileTypePolicy ermittelt)
     /// </summary>
+    [Obsolete("Use FileTypePolicy.GetContentType instead")]
     private static string GetContentType(string extension)
     {
-        return extension switch
-        {
-            ".txt" => "text/plain",
-            ".pdf" => "application/pdf",
-            ".doc" => "application/msword",
-            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ".xls" => "application/vnd.ms-excel",
-            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ".ppt" => "application/vnd.ms-powerpoint",
-            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            ".bmp" => "image/bmp",
-            ".svg" => "image/svg+xml",
-            ".xml" => "application/xml",
-            ".json" => "application/json",
-            ".html" or ".htm" => "text/html",
-            ".css" => "text/css",
-            ".js" => "application/javascript",
-            ".zip" => "application/zip",
-            ".rar" => "application/x-rar-compressed",
-            ".7z" => "application/x-7z-compressed",
-            ".mp3" => "audio/mpeg",
-            ".mp4" => "video/mp4",
-            ".avi" => "video/x-msvideo",
-            ".csv" => "text/csv",
-            ".rtf" => "application/rtf",
-            _ => "application/octet-stream"
-        };
+        return FileTypePolicy.GetContentType($".{extension.TrimStart('.')}");
     }
 
     private static DocumentDto MapToDto(Document document)
