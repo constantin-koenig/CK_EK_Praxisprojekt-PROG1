@@ -15,6 +15,7 @@ public class MainViewModel : ViewModelBase
 {
     private readonly IDocumentService _documentService;
     private readonly IFolderService _folderService;
+    private readonly ISearchService _searchService;
     private readonly SemaphoreSlim _dbLock = new(1, 1);
     private ViewModelBase? _currentViewModel;
     private string _statusMessage = "Bereit";
@@ -23,17 +24,26 @@ public class MainViewModel : ViewModelBase
     private ObservableCollection<DocumentDto> _documents = new();
     private DocumentDto? _selectedDocument;
     private bool _isInitialized = false;
+    
+    // Suche
+    private string _searchTerm = string.Empty;
+    private ObservableCollection<SearchResultDto> _searchResults = new();
+    private SearchResultDto? _selectedSearchResult;
+    private string _selectedDocumentText = string.Empty;
+    private string _selectedDocumentTitle = string.Empty;
 
-    public MainViewModel(IDocumentService documentService, IFolderService folderService)
+    public MainViewModel(IDocumentService documentService, IFolderService folderService, ISearchService searchService)
     {
         _documentService = documentService;
         _folderService = folderService;
+        _searchService = searchService;
 
         ShowDocumentsCommand = new RelayCommand(() => { });
         ShowFoldersCommand = new RelayCommand(() => { });
         RefreshCommand = new RelayCommand(async () => await RefreshAsync());
         CreateFolderCommand = new RelayCommand(async () => await CreateFolderAsync());
         AddDocumentCommand = new RelayCommand(async () => await AddDocumentAsync());
+        SearchCommand = new RelayCommand(async () => await SearchAsync());
 
         // Lade Ordner beim Start
         _ = InitializeAsync();
@@ -54,7 +64,13 @@ public class MainViewModel : ViewModelBase
     public DocumentDto? SelectedDocument
     {
         get => _selectedDocument;
-        set => SetProperty(ref _selectedDocument, value);
+        set
+        {
+            if (SetProperty(ref _selectedDocument, value) && value != null)
+            {
+                _ = LoadSelectedDocumentAsync(value.Id);
+            }
+        }
     }
 
     public FolderNodeViewModel? SelectedFolder
@@ -89,6 +105,44 @@ public class MainViewModel : ViewModelBase
     public ICommand RefreshCommand { get; }
     public ICommand CreateFolderCommand { get; }
     public ICommand AddDocumentCommand { get; }
+    public ICommand SearchCommand { get; }
+
+    // Suche Properties
+    public string SearchTerm
+    {
+        get => _searchTerm;
+        set => SetProperty(ref _searchTerm, value);
+    }
+
+    public ObservableCollection<SearchResultDto> SearchResults
+    {
+        get => _searchResults;
+        set => SetProperty(ref _searchResults, value);
+    }
+
+    public SearchResultDto? SelectedSearchResult
+    {
+        get => _selectedSearchResult;
+        set
+        {
+            if (SetProperty(ref _selectedSearchResult, value) && value != null)
+            {
+                _ = LoadSelectedDocumentAsync(value.DocumentId);
+            }
+        }
+    }
+
+    public string SelectedDocumentText
+    {
+        get => _selectedDocumentText;
+        set => SetProperty(ref _selectedDocumentText, value);
+    }
+
+    public string SelectedDocumentTitle
+    {
+        get => _selectedDocumentTitle;
+        set => SetProperty(ref _selectedDocumentTitle, value);
+    }
 
     private async Task InitializeAsync()
     {
@@ -320,6 +374,73 @@ public class MainViewModel : ViewModelBase
                 "Fehler beim Importieren",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            SearchResults.Clear();
+            SelectedDocumentText = string.Empty;
+            SelectedDocumentTitle = string.Empty;
+            return;
+        }
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            StatusMessage = $"Suche nach '{SearchTerm}'...";
+            
+            var results = await _searchService.SearchAsync(SearchTerm);
+            
+            SearchResults.Clear();
+            foreach (var result in results)
+            {
+                SearchResults.Add(result);
+            }
+
+            StatusMessage = $"{SearchResults.Count} Ergebnis(se) für '{SearchTerm}'";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Fehler bei der Suche: {ex.Message}";
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
+    }
+
+    private async Task LoadSelectedDocumentAsync(Guid documentId)
+    {
+        await _dbLock.WaitAsync();
+        try
+        {
+            StatusMessage = "Lade Dokument...";
+            
+            var documentWithData = await _documentService.GetWithDataAsync(documentId);
+            
+            if (documentWithData != null)
+            {
+                SelectedDocumentTitle = documentWithData.Title;
+                SelectedDocumentText = documentWithData.PlainText ?? string.Empty;
+                StatusMessage = $"Dokument '{documentWithData.Title}' geladen";
+            }
+            else
+            {
+                SelectedDocumentTitle = string.Empty;
+                SelectedDocumentText = string.Empty;
+                StatusMessage = "Dokument nicht gefunden";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Fehler beim Laden des Dokuments: {ex.Message}";
         }
         finally
         {

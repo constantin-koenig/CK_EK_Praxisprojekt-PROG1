@@ -40,28 +40,42 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
 
     public async Task<IEnumerable<Document>> SearchByTitleAsync(string searchTerm, CancellationToken cancellationToken = default)
     {
+        var pattern = $"%{searchTerm.Trim()}%";
+        
         return await _dbSet
+            .AsNoTracking()
             .Include(d => d.Folder)
-            .Where(d => d.Title.Contains(searchTerm))
-            .OrderBy(d => d.Title)
+            .Where(d => EF.Functions.Like(d.Title, pattern))
+            .OrderByDescending(d => d.CreatedAt)
+            .Take(200)
             .ToListAsync(cancellationToken);
     }
 
     public async Task<IEnumerable<Document>> SearchByContentAsync(string searchTerm, CancellationToken cancellationToken = default)
     {
+        var pattern = $"%{searchTerm.Trim()}%";
+        
         return await _dbSet
+            .AsNoTracking()
             .Include(d => d.Folder)
-            .Where(d => d.PlainText.Contains(searchTerm))
-            .OrderBy(d => d.Title)
+            .Where(d => EF.Functions.Like(d.PlainText, pattern))
+            .OrderByDescending(d => d.CreatedAt)
+            .Take(200)
             .ToListAsync(cancellationToken);
     }
 
     public async Task<IEnumerable<Document>> SearchAsync(string searchTerm, CancellationToken cancellationToken = default)
     {
+        var pattern = $"%{searchTerm.Trim()}%";
+        
         return await _dbSet
+            .AsNoTracking()
             .Include(d => d.Folder)
-            .Where(d => d.Title.Contains(searchTerm) || d.PlainText.Contains(searchTerm) || d.FileName.Contains(searchTerm))
-            .OrderBy(d => d.Title)
+            .Where(d => EF.Functions.Like(d.Title, pattern) 
+                     || EF.Functions.Like(d.PlainText, pattern) 
+                     || EF.Functions.Like(d.FileName, pattern))
+            .OrderByDescending(d => d.CreatedAt)
+            .Take(200)
             .ToListAsync(cancellationToken);
     }
 

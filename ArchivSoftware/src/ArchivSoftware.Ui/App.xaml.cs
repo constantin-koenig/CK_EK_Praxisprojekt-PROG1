@@ -60,6 +60,7 @@ public partial class App : System.Windows.Application
         // Application Services
         services.AddScoped<IFolderService, FolderService>();
         services.AddScoped<IDocumentService, DocumentService>();
+        services.AddScoped<ISearchService, SearchService>();
 
         // ViewModels
         services.AddTransient<MainViewModel>();

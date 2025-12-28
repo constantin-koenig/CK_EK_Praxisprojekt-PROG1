@@ -14,6 +14,8 @@
     
     <Window.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <conv:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+        <conv:PlaceholderVisibilityConverter x:Key="PlaceholderVisibilityConverter"/>
     </Window.Resources>
     
     <Grid>
@@ -29,6 +31,15 @@
             <Button Content="Dokument importieren" Command="{Binding AddDocumentCommand}" Padding="10,5"/>
             <Separator/>
             <Button Content="Aktualisieren" Command="{Binding RefreshCommand}" Padding="10,5"/>
+            <Separator/>
+            <!-- Suchfeld -->
+            <TextBlock Text="Suche:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+            <TextBox Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}" 
+                     Width="200" 
+                     VerticalAlignment="Center"
+                     Padding="5,3"
+                     KeyDown="SearchTextBox_KeyDown"/>
+            <Button Content="Suchen" Command="{Binding SearchCommand}" Padding="10,5" Margin="5,0,0,0"/>
         </ToolBar>
         
         <!-- Hauptbereich -->
@@ -60,46 +71,99 @@
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
             
             <!-- Dokumente-Bereich -->
-            <GroupBox Header="Dokumente" Grid.Column="2">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    
-                    <!-- Button zum Hinzufügen -->
-                    <Button Content="Dokument hinzufügen" 
-                            Command="{Binding AddDocumentCommand}" 
-                            HorizontalAlignment="Left"
-                            Padding="10,5"
-                            Margin="5"
-                            Grid.Row="0"/>
-                    
-                    <!-- Dokumentenliste -->
-                    <ListView ItemsSource="{Binding Documents}" 
-                              SelectedItem="{Binding SelectedDocument}"
-                              Grid.Row="1"
-                              Margin="5,0,5,5">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="Titel" Width="200" DisplayMemberBinding="{Binding Title}"/>
-                                <GridViewColumn Header="Dateiname" Width="180" DisplayMemberBinding="{Binding FileName}"/>
-                                <GridViewColumn Header="Erstellt" Width="140" DisplayMemberBinding="{Binding CreatedAt, StringFormat={}{0:dd.MM.yyyy HH:mm}}"/>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-                    
-                    <!-- Platzhalter wenn kein Ordner ausgewählt -->
-                    <TextBlock Text="Wählen Sie einen Ordner aus, um Dokumente anzuzeigen" 
-                               HorizontalAlignment="Center" 
-                               VerticalAlignment="Center"
-                               FontSize="14"
-                               Foreground="Gray"
-                               Grid.Row="1"
-                               IsHitTestVisible="False"
-                               Visibility="{Binding SelectedFolder, Converter={StaticResource NullToVisibilityConverter}}"/>
-                </Grid>
-            </GroupBox>
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Dokumente/Suchergebnisse -->
+                <GroupBox Grid.Row="0">
+                    <GroupBox.Header>
+                        <TextBlock>
+                            <Run Text="Dokumente"/>
+                            <Run Text=" - Suchergebnisse" Foreground="Blue" 
+                                 x:Name="SearchResultsHeader"/>
+                        </TextBlock>
+                    </GroupBox.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Button zum Hinzufügen -->
+                        <Button Content="Dokument hinzufügen" 
+                                Command="{Binding AddDocumentCommand}" 
+                                HorizontalAlignment="Left"
+                                Padding="10,5"
+                                Margin="5"
+                                Grid.Row="0"/>
+                        
+                        <!-- Dokumentenliste (wenn kein Suchbegriff) -->
+                        <ListView ItemsSource="{Binding Documents}" 
+                                  SelectedItem="{Binding SelectedDocument}"
+                                  Grid.Row="1"
+                                  Margin="5,0,5,5"
+                                  x:Name="DocumentsListView">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Titel" Width="200" DisplayMemberBinding="{Binding Title}"/>
+                                    <GridViewColumn Header="Dateiname" Width="180" DisplayMemberBinding="{Binding FileName}"/>
+                                    <GridViewColumn Header="Erstellt" Width="140" DisplayMemberBinding="{Binding CreatedAt, StringFormat={}{0:dd.MM.yyyy HH:mm}}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                        
+                        <!-- Suchergebnisliste -->
+                        <ListView ItemsSource="{Binding SearchResults}" 
+                                  SelectedItem="{Binding SelectedSearchResult}"
+                                  Grid.Row="1"
+                                  Margin="5,0,5,5"
+                                  x:Name="SearchResultsListView"
+                                  Visibility="{Binding SearchResults.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Titel" Width="150" DisplayMemberBinding="{Binding Title}"/>
+                                    <GridViewColumn Header="Dateiname" Width="120" DisplayMemberBinding="{Binding FileName}"/>
+                                    <GridViewColumn Header="Ordner" Width="150" DisplayMemberBinding="{Binding FolderPath}"/>
+                                    <GridViewColumn Header="Snippet" Width="250" DisplayMemberBinding="{Binding Snippet}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                        
+                        <!-- Platzhalter wenn kein Ordner ausgewählt und keine Suche aktiv -->
+                        <TextBlock Text="Wählen Sie einen Ordner aus oder nutzen Sie die Suche" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"
+                                   FontSize="14"
+                                   Foreground="Gray"
+                                   Grid.Row="1"
+                                   IsHitTestVisible="False">
+                            <TextBlock.Visibility>
+                                <MultiBinding Converter="{StaticResource PlaceholderVisibilityConverter}">
+                                    <Binding Path="SelectedFolder"/>
+                                    <Binding Path="SearchResults.Count"/>
+                                </MultiBinding>
+                            </TextBlock.Visibility>
+                        </TextBlock>
+                    </Grid>
+                </GroupBox>
+                
+                <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                
+                <!-- Dokumentvorschau -->
+                <GroupBox Grid.Row="2" Header="Inhalt des Dokuments">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="DocumentPreviewTextBlock"
+                                   TextWrapping="Wrap"
+                                   FontFamily="Consolas"
+                                   FontSize="12"
+                                   Padding="5"/>
+                    </ScrollViewer>
+                </GroupBox>
+            </Grid>
         </Grid>
         
         <!-- Statusleiste -->

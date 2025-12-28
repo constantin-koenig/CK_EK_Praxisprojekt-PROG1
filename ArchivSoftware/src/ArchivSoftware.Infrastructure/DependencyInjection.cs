@@ -32,6 +32,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IFolderService, FolderService>();
+        services.AddScoped<ISearchService, SearchService>();
 
         return services;
     }
