@@ -243,4 +243,125 @@ public class FolderService : IFolderService
             folder.Documents.Count,
             folder.CreatedAt);
     }
+
+    /// <summary>
+    /// Benennt einen Ordner um. Validiert Namen und prüft Uniqueness pro Parent.
+    /// </summary>
+    public async Task RenameFolderAsync(Guid folderId, string newName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+            throw new ArgumentException("Der Ordnername darf nicht leer sein.", nameof(newName));
+
+        var folder = await _unitOfWork.Folders.GetByIdAsync(folderId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Ordner mit ID {folderId} wurde nicht gefunden.");
+
+        // Root-Ordner darf nicht umbenannt werden
+        if (folder.ParentFolderId == null)
+            throw new InvalidOperationException("Der Root-Ordner kann nicht umbenannt werden.");
+
+        // Prüfe Uniqueness im Parent
+        if (!folder.Name.Equals(newName, StringComparison.OrdinalIgnoreCase) &&
+            await _unitOfWork.Folders.ExistsWithNameAsync(newName, folder.ParentFolderId, cancellationToken))
+        {
+            throw new InvalidOperationException($"Ein Ordner mit dem Namen '{newName}' existiert bereits in diesem Verzeichnis.");
+        }
+
+        folder.Rename(newName);
+        await _unitOfWork.Folders.UpdateAsync(folder, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Löscht einen Ordner inklusive aller Unterordner und Dokumente (Cascade).
+    /// </summary>
+    public async Task DeleteFolderAsync(Guid folderId, CancellationToken cancellationToken = default)
+    {
+        var folder = await _unitOfWork.Folders.GetByIdAsync(folderId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Ordner mit ID {folderId} wurde nicht gefunden.");
+
+        // Root-Ordner darf nicht gelöscht werden
+        if (folder.ParentFolderId == null)
+            throw new InvalidOperationException("Der Root-Ordner kann nicht gelöscht werden.");
+
+        // Rekursiv löschen (Children zuerst)
+        await DeleteFolderRecursiveAsync(folderId, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task DeleteFolderRecursiveAsync(Guid folderId, CancellationToken cancellationToken)
+    {
+        // Hole alle Unterordner
+        var children = await _unitOfWork.Folders.GetChildrenAsync(folderId, cancellationToken);
+        
+        // Rekursiv Unterordner löschen
+        foreach (var child in children)
+        {
+            await DeleteFolderRecursiveAsync(child.Id, cancellationToken);
+        }
+
+        // Dokumente des Ordners löschen
+        var documents = await _unitOfWork.Documents.GetByFolderIdAsync(folderId, cancellationToken);
+        foreach (var doc in documents)
+        {
+            await _unitOfWork.Documents.DeleteAsync(doc.Id, cancellationToken);
+        }
+
+        // Ordner selbst löschen
+        await _unitOfWork.Folders.DeleteAsync(folderId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Verschiebt einen Ordner zu einem neuen Parent. Prüft auf Zyklen und Uniqueness.
+    /// </summary>
+    public async Task MoveFolderAsync(Guid folderId, Guid newParentId, CancellationToken cancellationToken = default)
+    {
+        if (folderId == newParentId)
+            throw new InvalidOperationException("Ein Ordner kann nicht in sich selbst verschoben werden.");
+
+        var folder = await _unitOfWork.Folders.GetByIdAsync(folderId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Ordner mit ID {folderId} wurde nicht gefunden.");
+
+        var newParent = await _unitOfWork.Folders.GetByIdAsync(newParentId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Zielordner mit ID {newParentId} wurde nicht gefunden.");
+
+        // Root-Ordner darf nicht verschoben werden
+        if (folder.ParentFolderId == null)
+            throw new InvalidOperationException("Der Root-Ordner kann nicht verschoben werden.");
+
+        // Prüfe auf Zyklen: newParent darf kein Nachfahre von folder sein
+        if (await IsDescendantOfAsync(newParentId, folderId, cancellationToken))
+            throw new InvalidOperationException("Ein Ordner kann nicht in einen seiner Unterordner verschoben werden.");
+
+        // Prüfe Uniqueness im Zielordner
+        if (await _unitOfWork.Folders.ExistsWithNameAsync(folder.Name, newParentId, cancellationToken))
+            throw new InvalidOperationException($"Im Zielordner existiert bereits ein Ordner mit dem Namen '{folder.Name}'.");
+
+        // Verschieben
+        folder.ParentFolderId = newParentId;
+        folder.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Folders.UpdateAsync(folder, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Prüft ob potentialDescendantId ein Nachfahre von ancestorId ist.
+    /// </summary>
+    private async Task<bool> IsDescendantOfAsync(Guid potentialDescendantId, Guid ancestorId, CancellationToken cancellationToken)
+    {
+        var current = await _unitOfWork.Folders.GetByIdAsync(potentialDescendantId, cancellationToken);
+        
+        while (current != null)
+        {
+            if (current.Id == ancestorId)
+                return true;
+                
+            if (current.ParentFolderId == null)
+                break;
+                
+            current = await _unitOfWork.Folders.GetByIdAsync(current.ParentFolderId.Value, cancellationToken);
+        }
+        
+        return false;
+    }
 }

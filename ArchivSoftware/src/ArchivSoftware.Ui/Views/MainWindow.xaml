@@ -54,8 +54,10 @@
             
             <!-- Ordner-Baum -->
             <GroupBox Header="Ordner" Grid.Column="0">
-                <TreeView ItemsSource="{Binding Folders}"
-                          SelectedItemChanged="TreeView_SelectedItemChanged">
+                <TreeView x:Name="FolderTreeView"
+                          ItemsSource="{Binding Folders}"
+                          SelectedItemChanged="TreeView_SelectedItemChanged"
+                          PreviewMouseRightButtonDown="TreeView_PreviewMouseRightButtonDown">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <StackPanel Orientation="Horizontal">
@@ -68,6 +70,20 @@
                         <Style TargetType="TreeViewItem">
                             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                            <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                            <Setter Property="ContextMenu">
+                                <Setter.Value>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                                        <MenuItem Header="Umbenennen" 
+                                                  Command="{Binding RenameFolderCommand}"/>
+                                        <MenuItem Header="Löschen" 
+                                                  Command="{Binding DeleteFolderCommand}"/>
+                                        <Separator/>
+                                        <MenuItem Header="Verschieben..." 
+                                                  Command="{Binding MoveFolderCommand}"/>
+                                    </ContextMenu>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </TreeView.ItemContainerStyle>
                 </TreeView>
@@ -148,6 +164,16 @@
                                   Grid.Row="1"
                                   Margin="5,0,5,5"
                                   x:Name="DocumentsListView">
+                            <ListView.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Öffnen" Command="{Binding OpenDocumentCommand}"/>
+                                    <MenuItem Header="Exportieren..." Command="{Binding ExportDocumentCommand}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Verschieben..." Command="{Binding MoveDocumentCommand}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Löschen" Command="{Binding DeleteDocumentCommand}"/>
+                                </ContextMenu>
+                            </ListView.ContextMenu>
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Header="Titel" Width="200" DisplayMemberBinding="{Binding Title}"/>

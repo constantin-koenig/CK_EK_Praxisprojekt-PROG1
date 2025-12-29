@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using ArchivSoftware.Ui.Helpers;
 using ArchivSoftware.Ui.Services;
 using ArchivSoftware.Ui.ViewModels;
@@ -90,6 +91,23 @@ public partial class MainWindow : Window
                 Owner = this
             };
             window.Show();
+        }
+    }
+
+    private void TreeView_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // Finde das TreeViewItem, das tatsächlich angeklickt wurde
+        var source = e.OriginalSource as DependencyObject;
+        while (source != null && source is not TreeViewItem)
+        {
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        if (source is TreeViewItem clickedItem)
+        {
+            clickedItem.IsSelected = true;
+            clickedItem.Focus();
+            e.Handled = true;
         }
     }
 }

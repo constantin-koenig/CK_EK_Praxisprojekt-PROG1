@@ -118,6 +118,38 @@ public class FolderRepository : Repository<Folder>, IFolderRepository
             .AnyAsync(f => f.ParentFolderId == parentId && f.Name == name, cancellationToken);
     }
 
+    public async Task<Folder?> GetByIdWithParentAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(f => f.ParentFolder)
+            .Include(f => f.Children)
+            .Include(f => f.Documents)
+            .FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
+    }
+
+    public async Task<bool> IsDescendantAsync(Guid potentialDescendantId, Guid ancestorId, CancellationToken cancellationToken = default)
+    {
+        // Iterativ die Parent-Chain durchlaufen
+        var currentId = potentialDescendantId;
+        
+        while (true)
+        {
+            if (currentId == ancestorId)
+                return true;
+
+            var folder = await _dbSet
+                .AsNoTracking()
+                .Where(f => f.Id == currentId)
+                .Select(f => new { f.ParentFolderId })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (folder == null || folder.ParentFolderId == null)
+                return false;
+
+            currentId = folder.ParentFolderId.Value;
+        }
+    }
+
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.SaveChangesAsync(cancellationToken);

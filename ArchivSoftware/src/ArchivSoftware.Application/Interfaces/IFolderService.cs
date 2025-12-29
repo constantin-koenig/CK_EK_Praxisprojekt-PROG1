@@ -21,4 +21,19 @@ public interface IFolderService
     Task<FolderDto> UpdateAsync(Guid id, UpdateFolderDto dto, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IEnumerable<FolderDto>> SearchAsync(string searchTerm, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Benennt einen Ordner um. Validiert Namen und prüft Uniqueness pro Parent.
+    /// </summary>
+    Task RenameFolderAsync(Guid folderId, string newName, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Löscht einen Ordner inklusive aller Unterordner und Dokumente (Cascade).
+    /// </summary>
+    Task DeleteFolderAsync(Guid folderId, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Verschiebt einen Ordner zu einem neuen Parent. Prüft auf Zyklen und Uniqueness.
+    /// </summary>
+    Task MoveFolderAsync(Guid folderId, Guid newParentId, CancellationToken cancellationToken = default);
 }

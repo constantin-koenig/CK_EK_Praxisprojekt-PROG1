@@ -48,6 +48,17 @@ public interface IFolderRepository : IRepository<Folder>
     Task<bool> ChildFolderExistsAsync(Guid parentId, string name, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lädt einen Ordner mit Parent-Referenz.
+    /// </summary>
+    Task<Folder?> GetByIdWithParentAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Prüft, ob potentialDescendantId ein Nachfahre von ancestorId ist.
+    /// Wird für Zyklus-Prüfung beim Verschieben verwendet.
+    /// </summary>
+    Task<bool> IsDescendantAsync(Guid potentialDescendantId, Guid ancestorId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Speichert alle Änderungen.
     /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

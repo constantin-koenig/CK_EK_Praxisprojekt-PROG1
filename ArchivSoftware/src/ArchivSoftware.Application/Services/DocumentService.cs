@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using ArchivSoftware.Application.DTOs;
 using ArchivSoftware.Application.Interfaces;
@@ -100,6 +101,72 @@ public class DocumentService : IDocumentService
     public async Task<bool> ExistsWithHashAsync(string sha256, CancellationToken cancellationToken = default)
     {
         return await _unitOfWork.Documents.ExistsWithHashAsync(sha256, cancellationToken);
+    }
+
+    public async Task MoveToFolderAsync(Guid documentId, Guid newFolderId, CancellationToken cancellationToken = default)
+    {
+        var document = await _unitOfWork.Documents.GetByIdAsync(documentId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Dokument mit ID {documentId} wurde nicht gefunden.");
+
+        var newFolder = await _unitOfWork.Folders.GetByIdAsync(newFolderId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Zielordner mit ID {newFolderId} wurde nicht gefunden.");
+
+        document.FolderId = newFolderId;
+        document.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Documents.UpdateAsync(document, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Exportiert ein Dokument an einen angegebenen Pfad.
+    /// </summary>
+    public async Task ExportToFileAsync(Guid documentId, string targetPath, CancellationToken cancellationToken = default)
+    {
+        var document = await _unitOfWork.Documents.GetWithDataAsync(documentId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Dokument mit ID {documentId} wurde nicht gefunden.");
+
+        // Stelle sicher, dass das Zielverzeichnis existiert
+        var directory = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await File.WriteAllBytesAsync(targetPath, document.Data, cancellationToken);
+    }
+
+    /// <summary>
+    /// Öffnet ein Dokument mit der Standardanwendung.
+    /// Exportiert das Dokument in ein temporäres Verzeichnis und startet den zugehörigen Prozess.
+    /// </summary>
+    /// <returns>Der Pfad zur temporären Datei.</returns>
+    public async Task<string> OpenDocumentAsync(Guid documentId, CancellationToken cancellationToken = default)
+    {
+        var document = await _unitOfWork.Documents.GetWithDataAsync(documentId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Dokument mit ID {documentId} wurde nicht gefunden.");
+
+        // Erstelle temporäre Datei mit eindeutigem Namen
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "ArchivSoftware");
+        if (!Directory.Exists(tempDirectory))
+        {
+            Directory.CreateDirectory(tempDirectory);
+        }
+
+        var tempPath = Path.Combine(tempDirectory, $"{document.Id}_{document.FileName}");
+        
+        // Schreibe Datei
+        await File.WriteAllBytesAsync(tempPath, document.Data, cancellationToken);
+
+        // Öffne mit Standardanwendung
+        var processStartInfo = new ProcessStartInfo
+        {
+            FileName = tempPath,
+            UseShellExecute = true
+        };
+        Process.Start(processStartInfo);
+
+        return tempPath;
     }
 
     /// <summary>

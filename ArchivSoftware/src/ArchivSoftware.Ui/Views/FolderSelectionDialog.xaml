@@ -1,0 +1,60 @@
+<Window x:Class="ArchivSoftware.Ui.Views.FolderSelectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Zielordner auswählen" 
+        Height="400" 
+        Width="350"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        ShowInTaskbar="False">
+    
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock Grid.Row="0" 
+                   Text="Wählen Sie den Zielordner aus:" 
+                   Margin="0,0,0,10"/>
+        
+        <TreeView x:Name="FolderTreeView" 
+                  Grid.Row="1"
+                  BorderThickness="1"
+                  BorderBrush="LightGray"
+                  SelectedItemChanged="FolderTreeView_SelectedItemChanged">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding Name}"/>
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="True"/>
+                </Style>
+            </TreeView.ItemContainerStyle>
+        </TreeView>
+        
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,10,0,0">
+            <Button Content="Verschieben" 
+                    Width="100" 
+                    Padding="5" 
+                    Margin="0,0,10,0"
+                    IsDefault="True"
+                    Click="OkButton_Click"
+                    x:Name="OkButton"
+                    IsEnabled="False"/>
+            <Button Content="Abbrechen" 
+                    Width="80" 
+                    Padding="5"
+                    IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
