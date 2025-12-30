@@ -27,6 +27,14 @@
         
         <!-- Toolbar -->
         <ToolBar Grid.Row="0" Margin="5">
+            <!-- Mandanten-Auswahl -->
+            <TextBlock Text="Mandant:" VerticalAlignment="Center" Margin="5,0,5,0" FontWeight="Bold"/>
+            <ComboBox ItemsSource="{Binding AvailableTenants}" 
+                      SelectedItem="{Binding SelectedTenant}"
+                      Width="100"
+                      VerticalAlignment="Center"
+                      Margin="0,0,10,0"/>
+            <Separator/>
             <Button Content="Neuer Ordner" Command="{Binding CreateFolderCommand}" Padding="10,5"/>
             <Button Content="Dokument importieren" Command="{Binding AddDocumentCommand}" Padding="10,5"/>
             <Separator/>
@@ -236,7 +244,21 @@
         <!-- Statusleiste -->
         <StatusBar Grid.Row="2">
             <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Mandant: " FontWeight="Bold"/>
+                    <TextBlock Text="{Binding SelectedTenant}" Foreground="Blue" FontWeight="Bold"/>
+                </StackPanel>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}"/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Import-Warteschlange: "/>
+                    <TextBlock Text="{Binding PendingImportFilesCount}" FontWeight="Bold"/>
+                </StackPanel>
             </StatusBarItem>
         </StatusBar>
     </Grid>
