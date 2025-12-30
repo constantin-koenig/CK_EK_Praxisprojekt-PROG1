@@ -223,15 +223,6 @@ public class DocumentService : IDocumentService
         return document;
     }
 
-    /// <summary>
-    /// (Nicht mehr verwendet - ContentType wird über FileTypePolicy ermittelt)
-    /// </summary>
-    [Obsolete("Use FileTypePolicy.GetContentType instead")]
-    private static string GetContentType(string extension)
-    {
-        return FileTypePolicy.GetContentType($".{extension.TrimStart('.')}");
-    }
-
     private static DocumentDto MapToDto(Document document)
     {
         return new DocumentDto(
