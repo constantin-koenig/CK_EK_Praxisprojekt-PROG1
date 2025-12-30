@@ -1,33 +1,41 @@
 using ArchivSoftware.Domain.Interfaces;
 using ArchivSoftware.Infrastructure.Data;
 using ArchivSoftware.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace ArchivSoftware.Infrastructure;
 
 /// <summary>
 /// Unit of Work Implementierung für transaktionale Operationen.
+/// Nutzt DbContextFactory für Mandanten-Support.
 /// </summary>
 public class UnitOfWork : IUnitOfWork
 {
-    private readonly ArchivSoftwareDbContext _context;
+    private readonly IDbContextFactory<ArchivSoftwareDbContext> _contextFactory;
+    private ArchivSoftwareDbContext? _context;
     private IDocumentRepository? _documentRepository;
     private IFolderRepository? _folderRepository;
     private bool _disposed;
 
-    public UnitOfWork(ArchivSoftwareDbContext context)
+    public UnitOfWork(IDbContextFactory<ArchivSoftwareDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
+    /// <summary>
+    /// Lazy-Initialisierter DbContext für die aktuelle Unit of Work.
+    /// </summary>
+    private ArchivSoftwareDbContext Context => _context ??= _contextFactory.CreateDbContext();
+
     public IDocumentRepository Documents =>
-        _documentRepository ??= new DocumentRepository(_context);
+        _documentRepository ??= new DocumentRepository(Context);
 
     public IFolderRepository Folders =>
-        _folderRepository ??= new FolderRepository(_context);
+        _folderRepository ??= new FolderRepository(Context);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.SaveChangesAsync(cancellationToken);
+        return await Context.SaveChangesAsync(cancellationToken);
     }
 
     public void Dispose()
@@ -40,7 +48,7 @@ public class UnitOfWork : IUnitOfWork
     {
         if (!_disposed && disposing)
         {
-            _context.Dispose();
+            _context?.Dispose();
         }
         _disposed = true;
     }

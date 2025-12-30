@@ -25,6 +25,7 @@ namespace ArchivSoftware.Ui;
 public partial class App : System.Windows.Application
 {
     private IHost? _host;
+    private IServiceScope? _appScope;
 
     public App()
     {
@@ -43,22 +44,31 @@ public partial class App : System.Windows.Application
 
     private void ConfigureServices(IConfiguration configuration, IServiceCollection services)
     {
-        // Connection String aus appsettings.json
-        var connectionString = configuration.GetConnectionString("ArchivSoftwareDb");
+        // Konfiguration als Service registrieren
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // Verfügbare Mandanten aus ConnectionStrings ermitteln
+        var connectionStrings = configuration.GetSection("ConnectionStrings").GetChildren()
+            .Select(c => c.Key)
+            .ToList();
+
+        // TenantProvider als Singleton
+        var tenantProvider = new TenantProvider(connectionStrings, connectionStrings.FirstOrDefault() ?? "TenantA");
+        services.AddSingleton<ITenantProvider>(tenantProvider);
 
         // Options
         services.Configure<ImportWatcherOptions>(configuration.GetSection("ImportWatcher"));
+        
+        // ImportWatcherOptions als Singleton für direkten Zugriff
+        var importWatcherOptions = configuration.GetSection("ImportWatcher").Get<ImportWatcherOptions>() ?? new ImportWatcherOptions();
+        services.AddSingleton(importWatcherOptions);
 
-        // DbContext mit SQL Server
-        services.AddDbContext<ArchivSoftwareDbContext>(options =>
-            options.UseSqlServer(connectionString));
+        // DbContextFactory mit Mandanten-Support
+        services.AddSingleton<IDbContextFactory<ArchivSoftwareDbContext>, TenantDbContextFactory>();
+        services.AddSingleton<TenantDbContextFactory>();
 
-        // Unit of Work
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-        // Repositories als Scoped
-        services.AddScoped<IFolderRepository, FolderRepository>();
-        services.AddScoped<IDocumentRepository, DocumentRepository>();
+        // Unit of Work Factory - erstellt bei jeder Operation einen neuen UnitOfWork
+        services.AddSingleton<IUnitOfWorkFactory, UnitOfWorkFactory>();
 
         // Infrastructure Services
         services.AddSingleton<ITextExtractor, TextExtractor>();
@@ -70,10 +80,10 @@ public partial class App : System.Windows.Application
         
         services.AddHostedService<ImportWatcherService>();
 
-        // Application Services
-        services.AddScoped<IFolderService, FolderService>();
-        services.AddScoped<IDocumentService, DocumentService>();
-        services.AddScoped<ISearchService, SearchService>();
+        // Application Services - nutzen jetzt IUnitOfWorkFactory, daher als Singleton
+        services.AddSingleton<IFolderService, FolderService>();
+        services.AddSingleton<IDocumentService, DocumentService>();
+        services.AddSingleton<ISearchService, SearchService>();
 
         // ViewModels
         services.AddTransient<MainViewModel>();
@@ -88,18 +98,29 @@ public partial class App : System.Windows.Application
     {
         await _host!.StartAsync();
 
-        // Datenbank erstellen falls nicht vorhanden
-        using (var scope = _host.Services.CreateScope())
+        // Datenbanken für alle Mandanten erstellen falls nicht vorhanden
+        var dbContextFactory = _host.Services.GetRequiredService<TenantDbContextFactory>();
+        var tenantProvider = _host.Services.GetRequiredService<ITenantProvider>();
+        var folderService = _host.Services.GetRequiredService<IFolderService>();
+        
+        foreach (var tenant in tenantProvider.AvailableTenants)
         {
-            var context = scope.ServiceProvider.GetRequiredService<ArchivSoftwareDbContext>();
-            await context.Database.EnsureCreatedAsync();
+            tenantProvider.CurrentTenant = tenant;
+            await dbContextFactory.EnsureDatabaseCreatedAsync();
+            
+            // Root- und AutoImport-Ordner für jeden Mandanten anlegen
+            await folderService.EnsureRootFolderExistsAsync();
+            await folderService.EnsureSpecialFolderExistsAsync("AutoImport");
         }
+        
+        // Zurück zum ersten Mandanten
+        tenantProvider.CurrentTenant = tenantProvider.AvailableTenants.FirstOrDefault() ?? "TenantA";
 
         // MainWindow und MainViewModel aus einem Scope holen
         // Der Scope bleibt für die Lebensdauer der App offen
-        var appScope = _host.Services.CreateScope();
-        var mainWindow = appScope.ServiceProvider.GetRequiredService<MainWindow>();
-        mainWindow.DataContext = appScope.ServiceProvider.GetRequiredService<MainViewModel>();
+        _appScope = _host.Services.CreateScope();
+        var mainWindow = _appScope.ServiceProvider.GetRequiredService<MainWindow>();
+        mainWindow.DataContext = _appScope.ServiceProvider.GetRequiredService<MainViewModel>();
         mainWindow.Show();
 
         base.OnStartup(e);
@@ -107,6 +128,8 @@ public partial class App : System.Windows.Application
 
     protected override async void OnExit(ExitEventArgs e)
     {
+        _appScope?.Dispose();
+        
         if (_host != null)
         {
             await _host.StopAsync();

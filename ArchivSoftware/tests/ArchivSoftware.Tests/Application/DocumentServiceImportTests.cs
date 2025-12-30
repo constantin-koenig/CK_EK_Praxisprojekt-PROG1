@@ -12,6 +12,7 @@ namespace ArchivSoftware.Tests.Application;
 /// </summary>
 public class DocumentServiceImportTests
 {
+    private readonly Mock<IUnitOfWorkFactory> _mockUnitOfWorkFactory;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ITextExtractor> _mockTextExtractor;
     private readonly Mock<IDocumentRepository> _mockDocumentRepository;
@@ -20,6 +21,7 @@ public class DocumentServiceImportTests
 
     public DocumentServiceImportTests()
     {
+        _mockUnitOfWorkFactory = new Mock<IUnitOfWorkFactory>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockTextExtractor = new Mock<ITextExtractor>();
         _mockDocumentRepository = new Mock<IDocumentRepository>();
@@ -27,8 +29,9 @@ public class DocumentServiceImportTests
 
         _mockUnitOfWork.Setup(u => u.Documents).Returns(_mockDocumentRepository.Object);
         _mockUnitOfWork.Setup(u => u.Folders).Returns(_mockFolderRepository.Object);
+        _mockUnitOfWorkFactory.Setup(f => f.Create()).Returns(_mockUnitOfWork.Object);
 
-        _documentService = new DocumentService(_mockUnitOfWork.Object, _mockTextExtractor.Object);
+        _documentService = new DocumentService(_mockUnitOfWorkFactory.Object, _mockTextExtractor.Object);
     }
 
     [Theory]

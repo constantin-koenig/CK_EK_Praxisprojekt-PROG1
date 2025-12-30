@@ -2,8 +2,11 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
+using ArchivSoftware.Application;
 using ArchivSoftware.Application.DTOs;
 using ArchivSoftware.Application.Interfaces;
+using ArchivSoftware.Application.Options;
 using ArchivSoftware.Ui.Views;
 using Microsoft.Win32;
 
@@ -17,6 +20,7 @@ public class MainViewModel : ViewModelBase
     private readonly IDocumentService _documentService;
     private readonly IFolderService _folderService;
     private readonly ISearchService _searchService;
+    private readonly ITenantProvider _tenantProvider;
     private readonly SemaphoreSlim _dbLock = new(1, 1);
     private ViewModelBase? _currentViewModel;
     private string _statusMessage = "Bereit";
@@ -35,17 +39,30 @@ public class MainViewModel : ViewModelBase
 
     // Import-Log (wird via DI injiziert)
     private ObservableCollection<ImportLogItem> _importLog;
+    
+    // Import-Warteschlange
+    private readonly ImportWatcherOptions _importWatcherOptions;
+    private readonly DispatcherTimer _importQueueTimer;
+    private int _pendingImportFilesCount;
+    
+    // Mandanten
+    private string _selectedTenant;
 
     public MainViewModel(
         IDocumentService documentService, 
         IFolderService folderService, 
         ISearchService searchService,
-        ObservableCollection<ImportLogItem> importLog)
+        ObservableCollection<ImportLogItem> importLog,
+        ImportWatcherOptions importWatcherOptions,
+        ITenantProvider tenantProvider)
     {
         _documentService = documentService;
         _folderService = folderService;
         _searchService = searchService;
         _importLog = importLog;
+        _importWatcherOptions = importWatcherOptions;
+        _tenantProvider = tenantProvider;
+        _selectedTenant = tenantProvider.CurrentTenant;
 
         ShowDocumentsCommand = new RelayCommand(() => { });
         ShowFoldersCommand = new RelayCommand(() => { });
@@ -64,6 +81,17 @@ public class MainViewModel : ViewModelBase
         ExportDocumentCommand = new RelayCommand(async () => await ExportDocumentAsync(), () => SelectedDocument != null);
         DeleteDocumentCommand = new RelayCommand(async () => await DeleteDocumentAsync(), () => SelectedDocument != null);
         MoveDocumentCommand = new RelayCommand(async () => await MoveDocumentAsync(), () => SelectedDocument != null);
+
+        // Timer für Import-Warteschlange (alle 5 Sekunden)
+        _importQueueTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(5)
+        };
+        _importQueueTimer.Tick += ImportQueueTimer_Tick;
+        _importQueueTimer.Start();
+        
+        // Initialer Zählvorgang
+        UpdatePendingImportFilesCount();
 
         // Lade Ordner beim Start
         _ = InitializeAsync();
@@ -127,6 +155,105 @@ public class MainViewModel : ViewModelBase
     {
         get => _statusMessage;
         set => SetProperty(ref _statusMessage, value);
+    }
+
+    /// <summary>
+    /// Anzahl der Dateien in der Import-Warteschlange.
+    /// </summary>
+    public int PendingImportFilesCount
+    {
+        get => _pendingImportFilesCount;
+        set => SetProperty(ref _pendingImportFilesCount, value);
+    }
+
+    /// <summary>
+    /// Liste der verfügbaren Mandanten.
+    /// </summary>
+    public IReadOnlyList<string> AvailableTenants => _tenantProvider.AvailableTenants;
+
+    /// <summary>
+    /// Der aktuell ausgewählte Mandant.
+    /// </summary>
+    public string SelectedTenant
+    {
+        get => _selectedTenant;
+        set
+        {
+            if (SetProperty(ref _selectedTenant, value) && value != _tenantProvider.CurrentTenant)
+            {
+                _ = SwitchTenantAsync(value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Wechselt den Mandanten und lädt die Daten neu.
+    /// </summary>
+    private async Task SwitchTenantAsync(string newTenant)
+    {
+        await _dbLock.WaitAsync();
+        try
+        {
+            StatusMessage = $"Wechsle zu Mandant '{newTenant}'...";
+            
+            // Mandant im Provider setzen
+            _tenantProvider.CurrentTenant = newTenant;
+            
+            // UI zurücksetzen
+            Folders.Clear();
+            Documents.Clear();
+            SearchResults.Clear();
+            SelectedFolder = null;
+            SelectedDocument = null;
+            SelectedDocumentText = string.Empty;
+            SelectedDocumentTitle = string.Empty;
+            SearchTerm = string.Empty;
+            
+            StatusMessage = $"Mandant '{newTenant}' - Lade Daten...";
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
+        
+        // Daten für neuen Mandanten laden
+        await LoadFoldersAsync();
+        
+        StatusMessage = $"Mandant '{newTenant}' aktiv";
+    }
+
+    private void ImportQueueTimer_Tick(object? sender, EventArgs e)
+    {
+        UpdatePendingImportFilesCount();
+    }
+
+    private void UpdatePendingImportFilesCount()
+    {
+        try
+        {
+            var importPath = _importWatcherOptions.Path;
+            
+            if (string.IsNullOrEmpty(importPath) || !Directory.Exists(importPath))
+            {
+                PendingImportFilesCount = 0;
+                return;
+            }
+
+            // Zähle nur PDF und DOCX Dateien im Hauptverzeichnis
+            var count = Directory.GetFiles(importPath, "*.*", SearchOption.TopDirectoryOnly)
+                .Count(f => 
+                {
+                    var ext = Path.GetExtension(f).ToLowerInvariant();
+                    return ext == ".pdf" || ext == ".docx";
+                });
+
+            PendingImportFilesCount = count;
+        }
+        catch
+        {
+            // Bei Fehlern (z.B. Ordner nicht zugänglich) auf 0 setzen
+            PendingImportFilesCount = 0;
+        }
     }
 
     public ICommand ShowDocumentsCommand { get; }

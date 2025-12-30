@@ -7,14 +7,15 @@ namespace ArchivSoftware.Application.Services;
 
 /// <summary>
 /// Service für die Dokumentensuche mit Snippet-Generierung.
+/// Nutzt IUnitOfWorkFactory für Mandanten-Support.
 /// </summary>
 public class SearchService : ISearchService
 {
-    private readonly IDocumentRepository _documentRepository;
+    private readonly IUnitOfWorkFactory _unitOfWorkFactory;
 
-    public SearchService(IDocumentRepository documentRepository)
+    public SearchService(IUnitOfWorkFactory unitOfWorkFactory)
     {
-        _documentRepository = documentRepository;
+        _unitOfWorkFactory = unitOfWorkFactory;
     }
 
     /// <inheritdoc />
@@ -25,7 +26,8 @@ public class SearchService : ISearchService
             return new List<SearchResultDto>();
         }
 
-        var documents = await _documentRepository.SearchAsync(term.Trim(), cancellationToken);
+        using var unitOfWork = _unitOfWorkFactory.Create();
+        var documents = await unitOfWork.Documents.SearchAsync(term.Trim(), cancellationToken);
         var results = new List<SearchResultDto>();
 
         foreach (var doc in documents)
