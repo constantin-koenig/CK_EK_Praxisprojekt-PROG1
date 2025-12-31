@@ -13,12 +13,28 @@ Volltextsuche (PlainText), Trefferliste, Detailansicht.
 ## Setup
 
 1. Repository klonen
-2. `ArchivSoftware.Ui/appsettings.json` prüfen (ConnectionStrings, ImportWatcher)
+2. `ArchivSoftware/src/ArchivSoftware.Ui/appsettings.json` prüfen (ConnectionStrings, ImportWatcher)
 3. Migration/DB erstellen:
    ```bash
-   dotnet ef database update --project ArchivSoftware.Infrastructure --startup-project ArchivSoftware.Ui
+   cd ArchivSoftware
+   dotnet ef database update --project src/ArchivSoftware.Infrastructure --startup-project src/ArchivSoftware.Ui
    ```
-4. App starten: dotnet run --project ArchivSoftware.Ui
+
+## Starten
+
+**Option 1:** Startskript verwenden (aus dem `ArchivSoftware`-Ordner):
+
+```bash
+.\run.bat       # Windows Batch
+.\run.ps1       # PowerShell
+```
+
+**Option 2:** Direkt aus dem UI-Verzeichnis:
+
+```bash
+cd ArchivSoftware/src/ArchivSoftware.Ui
+dotnet run
+```
 
 ## Mandanten / DB-Switch
 
