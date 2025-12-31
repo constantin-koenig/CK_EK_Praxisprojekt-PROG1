@@ -7,8 +7,10 @@
         xmlns:conv="clr-namespace:ArchivSoftware.Ui.Converters"
         mc:Ignorable="d"
         Title="ArchivSoftware" 
-        Height="600" 
-        Width="900"
+        Height="700" 
+        Width="1200"
+        MinWidth="900"
+        MinHeight="500"
         WindowStartupLocation="CenterScreen"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
     
